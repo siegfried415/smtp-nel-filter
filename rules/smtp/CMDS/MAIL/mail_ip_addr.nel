@@ -1,0 +1,40 @@
+/*
+ * mail_ip_addr.nel
+ * $Id: mail_ip_addr.nel,v 1.3 2005/11/28 02:16:35 wyong Exp $
+ */
+
+static int nid = 22;
+static char des[] = "the ip mail address (*@[X.X.X.X]) are not permitted in MAIL FROM command!";
+
+event struct smtp_atk	*NAKED_IP_MAILBOX;
+int naked_ip_addr(char *data, int len)
+{
+	char *addr, *last; 
+	addr = nel_strchr(data, (char)'@' ) ; 
+	if (addr == NULL ) {
+		return 0;
+	}
+
+	addr++;
+	if ((*addr != '[') || ((last = nel_strchr(addr, ']')) == 0)) {
+		return (0);
+	}
+
+	return 1;
+
+}
+
+
+NAKED_IP_MAILBOX: mail_req( naked_ip_addr($1->addr, $1->addr_len))
+	{
+		print("found a ip mail addr in MAIL FROM command!\n");
+		smtp_deny( $0 ); 
+	}
+	;
+
+BAD_MAIL_REQ: NAKED_IP_MAILBOX 
+	{
+
+	}
+	;
+

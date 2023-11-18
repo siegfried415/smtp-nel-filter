@@ -1,0 +1,21 @@
+/*
+ * mail_invalid_size.nel
+ * $Id: mail_invalid_size.nel,v 1.2 2005/11/03 15:58:15 wyong Exp $
+ */
+
+static int nid = 25;
+static char des[] = "the keyword SIZE in MAIL FROM is not declared in previous ACK of EHLO.";
+
+event struct smtp_atk	 *SIZE_NOT_ALLOWED;
+SIZE_NOT_ALLOWED: mail_req( $1->key == SMTP_MAIL_SIZE && $0->cmd_allow[SMTP_ALLOW_SIZE] == 0 )
+	{
+		print("found a MAIL FROM command with keyword SIZE without declaration of SIZE at previous EHLO ACK!\n");
+		smtp_deny( $0 ) ; 
+	}
+	;
+
+BAD_MAIL_REQ: SIZE_NOT_ALLOWED 
+	{
+
+	}
+	;

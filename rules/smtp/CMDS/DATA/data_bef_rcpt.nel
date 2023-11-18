@@ -1,0 +1,24 @@
+/*
+ * data_bef_rcpt.nel
+ * $Id: data_bef_rcpt.nel,v 1.2 2005/11/11 03:44:11 wyong Exp $
+ */
+
+static int nid = 35;
+static char des[] ="Accroding to RFC 2821, the RCPT TO command must have been seen before a DATA command arrived!";
+
+event struct smtp_atk *DATA_BEFORE_RCPT;
+DATA_BEFORE_RCPT: data_req($0->mail_state < SMTP_MAIL_STATE_RCPT )
+	{
+		print("Haven't seen RCPT TO command before this DATA command!\n");
+		smtp_deny( $0 ) ;
+	}
+	;
+
+
+BAD_DATA_REQ:DATA_BEFORE_RCPT
+	{
+
+	}
+	;
+
+

@@ -1,0 +1,22 @@
+/*
+ * ehlo_long.nel
+ * $Id: ehlo_long.nel,v 1.4 2005/11/16 06:19:18 wyong Exp $
+ */
+
+static int nid = 2;
+static char des[]= "Accrding to RFC 2821, a EHLO command can't be large then 512.";
+static char ref[] = "CAN-1999-0098, CAN-1999-0284, CAN-1999-1529, CVE-2000-0042, CVE-2000-0488, CVE-2000-0507, CAN-2000-0657, CAN-2003-0264, CAN-2004-1291";
+
+event struct smtp_atk	 *LONG_EHLO;
+LONG_EHLO: ehlo_req( $1-> host_name_len >= 512 )
+	{
+		print("found a long ehlo command! len =%d\n", $1->len );
+		smtp_deny( $0 );
+	}
+	;
+
+BAD_EHLO_REQ: LONG_EHLO
+	{
+
+	}
+	;

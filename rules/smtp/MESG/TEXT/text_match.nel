@@ -1,0 +1,24 @@
+/*
+ * text_match.nel
+ * $Id: text_match.nel,v 1.1 2005/11/16 06:09:54 wyong Exp $
+ */
+
+static int nid = 91;
+static char type[] = "vulnerability";
+static char des[] = "instructions that can potentially executed as shellcode in From header";
+static char ref[] = "CAN-2002-1337, CVE-2001-0494, CVE-2001-0690";
+
+event struct smtp_atk	*TEXT_MATCH; 
+TEXT_MATCH: TEXT( $1->ts_stream ~/fsdf/ )
+	{
+		print("found forbiden string in TEXT!\n");
+		smtp_deny( $0 ); 
+	}
+	;
+
+BAD_TEXT: TEXT_MATCH 
+	{
+
+	}
+	;
+

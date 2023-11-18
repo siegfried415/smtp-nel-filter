@@ -1,0 +1,962 @@
+/*
+ * smtp.nel contain protocol desciption of SMTP protocol. 
+ * $Id: smtp.nel,v 1.11 2005/12/08 03:30:22 wyong Exp $
+ */
+
+struct smtp_info_user{
+	int vrfy_cnt;
+	int fail_vrfy_cnt;
+};
+
+atom	struct smtp_cmd_ehlo	*ehlo_req; 
+event	struct smtp_cmd_ehlo	*EHLO,
+				*BAD_EHLO_REQ, 
+				*EHLO_REQ_OK;
+
+atom	struct smtp_cmd_helo	*helo_req;
+event 	struct smtp_cmd_helo	*HELO,
+				*BAD_HELO_REQ, 
+				*HELO_REQ_OK;
+
+atom	struct smtp_cmd_user	*user_req;
+event	struct smtp_cmd_user	*USER,
+				*BAD_USER_REQ, 
+				*USER_REQ_OK;
+
+atom	struct smtp_cmd_passwd	*pass_req; 
+event	struct smtp_cmd_passwd	*PASS,	
+				*BAD_PASS_REQ, 
+				*PASS_REQ_OK;
+
+atom	struct smtp_cmd_auth	*auth_req; 
+event	struct smtp_cmd_auth	*AUTH,
+				*BAD_AUTH_REQ, 
+				*AUTH_REQ_OK;
+
+atom	struct smtp_cmd_mail	*mail_req; 
+event	struct smtp_cmd_mail	*MAIL,
+				*BAD_MAIL_REQ, 
+				*MAIL_REQ_OK;
+
+atom	struct smtp_cmd_mail	*send_req; 
+event	struct smtp_cmd_mail	*SEND,
+				*BAD_SEND_REQ, 
+				*SEND_REQ_OK;
+
+atom	struct smtp_cmd_mail	*soml_req; 
+event	struct smtp_cmd_mail	*SOML,
+				*BAD_SOML_REQ, 
+				*SOML_REQ_OK;
+
+atom	struct smtp_cmd_mail	*saml_req; 
+event	struct smtp_cmd_mail	*SAML,
+				*BAD_SAML_REQ, 
+				*SAML_REQ_OK;
+
+
+atom	struct smtp_cmd_rset	*rset_req; 
+event	struct smtp_cmd_rset	*RSET,
+				*BAD_RSET_REQ, 
+				*RSET_REQ_OK;
+
+
+atom	struct smtp_cmd_expn	*expn_req; 
+event	struct smtp_cmd_expn	*EXPN,
+				*BAD_EXPN_REQ, 
+				*EXPN_REQ_OK;
+
+atom	struct smtp_cmd_vrfy	*vrfy_req; 
+event	struct smtp_cmd_vrfy	*BAD_VRFY_REQ, 
+				*VRFY_REQ_OK;
+
+
+atom	struct smtp_cmd_rcpt	*rcpt_req; 
+event	struct smtp_cmd_rcpt	*RCPT,
+				*BAD_RCPT,
+				*RCPTS,
+				*BAD_RCPT_REQ, 
+				*RCPT_REQ_OK;
+
+atom	struct smtp_cmd_data	*data_req; 
+event	struct smtp_cmd_data	*DATA,
+				*BAD_DATA_REQ, 
+				*DATA_REQ_OK;
+
+
+atom	struct smtp_cmd_quit	*quit_req; 
+event	struct smtp_cmd_quit	*QUIT,
+				*BAD_QUIT_REQ, 
+				*QUIT_REQ_OK;
+
+
+atom	struct smtp_ack  	*ack, 
+				*vrfy_ack, 
+				*expn_ack, 
+				*ehlo_ack;
+
+event	struct smtp_ack  	*ACK, *BAD_ACK;
+
+
+atom	struct smtp_mime_content_type *content_type;
+event	struct smtp_mime_content_type *CONTENT_TYPE,
+				*BAD_CONTENT_TYPE;
+
+atom	struct smtp_mime_disposition *content_disposition;
+event	struct smtp_mime_disposition *CONTENT_DISPOSITION,
+				*BAD_CONTENT_DISPOSITION;
+
+atom 	struct smtp_message_id *message_id;
+event 	struct smtp_message_id *MESSAGE_ID, *BAD_MESSAGE_ID;
+
+
+atom 	struct smtp_from	*from;
+event	struct smtp_from	*BAD_FROM, *FROM;
+		
+atom	struct smtp_to		*to;
+event	struct smtp_to		*BAD_TO, *TO;
+
+event	struct smtp_mime_field 	*FLD;
+event	struct smtp_mime_fields	*FLDS;
+event	struct smtp_mime_fields	*Header, 
+				*Header_OK,				
+				*BAD_Header;
+
+
+atom	struct smtp_mime_text	*text;
+atom	void 			*eoh, 	/* end of fields */
+				*eot,	/* end of text */ 
+				*eob, 	/* end of boundary */
+				*eom;	/* end of mseg */
+//wyong, 20231024 
+atom	void			*end;
+
+//wyong, 20231021 
+event 	struct smtp_mime_text_stream	*TEXT, 
+				*TEXT_OK,
+				*BAD_TEXT;
+
+
+//wyong, 20231011
+event 	struct smtp_mime_data	*Body;
+
+event	struct mailmime_list	*MSGS;
+event 	struct mailmime		*MESG, *MESG_OK, *BAD_MESG,
+				*MSG, *BAD_MSG, *MLT_MSG, *SIG_MSG, *RFC_MSG;
+
+
+event 	struct smtp_simple_event *COMD,
+				*COMDS,
+				*BAD_COMDS;
+
+event 	void			*ANY;
+event 	struct smtp_info 	*SMTP_CON;
+event	struct smtp_info	*link;
+event 	void 			*target;
+
+//wyong, 20231022
+//#include "../nel/system.nel"
+#include "attacks.nel"
+
+
+/****************************** ACK  *****************************************/
+ACK	: ack
+	{
+		print("---> ACK : ack \n");
+		return 0;
+	}
+	| expn_ack
+	{
+		print("---> ACK : expn_ack \n");
+		return 0;
+	}
+	| vrfy_ack 
+	{
+		print("---> ACK : vrfy_ack \n");
+		return 0;
+	}
+	| ehlo_ack
+	{
+		print("---> ACK : ehlo_ack \n");
+		return 0;
+	}
+	! BAD_ACK
+	{
+		print("---> ACK ! BAD_ACK \n");
+		return 0;
+	}
+	;
+
+
+/****************************** HELO *****************************************/
+HELO_REQ_OK: helo_req 
+	{
+		print("--->HELO_REQ_OK: helo_req\n");
+		/*$0->permit = SMTP_PERMIT_DROP;*/
+		return 0;
+	}
+	! BAD_HELO_REQ 
+	{
+		print("--->HELO_REQ_OK! BAD_HELO_REQ\n");
+		return 0;
+	}
+	;
+
+/****************************** EHLO *****************************************/
+EHLO_REQ_OK: ehlo_req
+	{
+		print("--->EHLO_REQ_OK: ehlo_req\n");
+		/* $0->seen_ehlo = 1;*/
+		return 0;
+	}
+	! BAD_EHLO_REQ 
+	{
+		print("--->EHLO_REQ_OK! BAD_EHLO_REQ\n");
+		return 0;
+	}
+	;
+
+
+/****************************** AUTH *****************************************/
+AUTH_REQ_OK : auth_req 
+	{
+		print("--->AUTH_REQ_OK: auth_req\n");
+		return 0;
+	}
+	! BAD_AUTH_REQ
+	{
+		print("--->AUTH_REQ_OK! BAD_AUTH_REQ\n");
+		return 0;
+	}
+	;
+
+/****************************** USER *****************************************/
+USER_REQ_OK : user_req 
+	{
+		print("---> USER_REQ_OK: user_req\n");
+		return 0;
+	}
+	! BAD_USER_REQ 
+	{
+		print("---> USER_REQ_OK! BAD_USER_REQ\n");
+		return 0;
+	}
+	;
+
+
+/****************************** PASS  *****************************************/
+PASS_REQ_OK : pass_req 
+	{
+		print("--->PASS_REQ_OK: pass_req\n");
+		return 0;
+	}
+	! BAD_PASS_REQ
+	{
+		print("--->PASS_REQ_OK ! BAD_PASS_REQ\n");
+		return 0;
+	}
+	;
+
+
+/****************************** MAIL *****************************************/
+MAIL_REQ_OK: mail_req 
+	{
+		print("--->MAIL_REQ_OK: MAIL_REQ\n");
+		print("from : %s", $1->addr);
+		dump_ip_addr($0->saddr, $0->daddr, $0->sport, $0->dport);
+		return 0;
+	}
+	! BAD_MAIL_REQ
+	{
+		print("--->MAIL_REQ_OK! BAD_MAIL_REQ\n");
+		return 0;
+	}
+	;
+
+
+/****************************** SEND *****************************************/
+SEND_REQ_OK: send_req 
+	{
+		print("--->SEND_REQ_OK: send_req\n");
+		return 0;
+	}
+	! BAD_SEND_REQ
+	{
+		print("--->SEND_REQ_OK! BAD_SEND_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** SOML *****************************************/
+SOML_REQ_OK: soml_req 
+	{
+		print("--->SOML_REQ_OK: soml_req\n");
+		return 0;
+	}
+	! BAD_SOML_REQ
+	{
+		print("--->SOML_REQ_OK! BAD_SOML_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** SAML *****************************************/
+SAML_REQ_OK: saml_req
+	{
+		print("--->SAML_REQ_OK: saml_req\n");
+		return 0;
+	}
+	! BAD_SAML_REQ
+	{
+		print("--->SAML_REQ_OK! BAD_SAML_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** VRFY *****************************************/
+VRFY_REQ_OK: vrfy_req 
+	{
+		print("--->VRFY_REQ_OK: vrfy_req\n" );
+		return 0;
+	}
+	! BAD_VRFY_REQ
+	{
+		print("--->VRFY_REQ_OK! BAD_VRFY_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** EXPN *****************************************/
+EXPN_REQ_OK: expn_req 
+	{
+		print("--->EXPN_REQ_OK: expn_req\n");
+		/*$0->permit = SMTP_PERMIT_DROP;*/
+		return 0;
+	}
+	! BAD_EXPN_REQ
+	{
+		print("--->EXPN_REQ_OK! BAD_EXPN_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** RSET *****************************************/
+RSET_REQ_OK: rset_req 
+	{
+		print("--->RSET_REQ_OK: rset_req\n");
+		return 0;
+	}
+	! BAD_RSET_REQ
+	{
+		print("--->RSET_REQ_OK! BAD_RSET_REQ\n");
+		return 0;
+	}
+	;
+
+
+	
+/****************************** RCPT *****************************************/
+RCPT_REQ_OK: rcpt_req 
+	{
+		print("--->RCPT_REQ_OK: RCPT_REQ\n");
+		return 0;
+	}
+	! BAD_RCPT_REQ
+	{
+		print("--->RCPT_REQ_OK! BAD_RCPT_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** DATA *****************************************/
+DATA_REQ_OK: data_req 
+	{
+		print("--->DATA_REQ_OK: data_req\n");
+		return 0;
+	}
+	! BAD_DATA_REQ
+	{
+		print("--->DATA_REQ_OK! BAD_DATA_REQ\n");
+		return 0;
+	}
+	;
+
+
+
+/****************************** QUIT *****************************************/
+QUIT_REQ_OK: quit_req 
+	{
+		print("--->QUIT_REQ_OK: quit_req\n");
+		return 0;
+	}
+	! BAD_QUIT_REQ
+	{
+		print("--->QUIT_REQ_OK! BAD_QUIT_REQ\n");
+		return 0;
+	}
+	;
+
+
+TO	: to 
+	{
+		print("TO : to\n");
+		return $1;
+	}
+	! BAD_TO
+	{
+		print("TO ! BAD_TO\n");
+		return 0;
+	}
+	;
+
+FROM	: from
+	{
+		print("FROM : from\n");
+		return $1;
+	}
+	! BAD_FROM
+	{
+		print("FROM ! BAD_FROM\n");
+		return 0;
+	}
+	;
+
+
+CONTENT_DISPOSITION: content_disposition 
+	{
+		print("CONTENT_DISPOSITION: content_disposition\n");
+		return $1;
+	}
+	! BAD_CONTENT_DISPOSITION
+	{
+		print("CONTENT_DISPOSITION ! BAD_CONTENT_DISPOSITION\n");
+		return 0;
+	}
+	;
+
+CONTENT_TYPE: content_type 
+	{
+		print("CONTENT_TYPE: content_type\n");
+		return $1;
+	}
+	! BAD_CONTENT_TYPE
+	{
+		print("CONTENT_TYPE! BAD_CONTENT_TYPE\n");
+		return 0;
+	}
+	;
+
+
+MESSAGE_ID: message_id 
+	{
+		print("MESSAGE_ID: message_id\n");
+		return $1;
+	}
+	! BAD_MESSAGE_ID
+	{
+		print("MESSAGE_ID ! BAD_MESSAGE_ID\n");
+		return 0;
+	}
+	;
+
+
+/******************************* MSG *****************************************/
+FLD	: CONTENT_TYPE
+	{
+		print("--->FLD : CONTENT_TYPE\n");
+		return smtp_mime_field_new(SMTP_MIME_FIELD_TYPE, $1);
+	}
+
+	| CONTENT_DISPOSITION
+	{
+		print("--->FLD : CONTENT_DISPOSITION\n");
+		return smtp_mime_field_new(SMTP_MIME_FIELD_DISPOSITION, $1);
+	}
+
+	| FROM
+	{
+		print("--->FLD : FROM\n ");
+		return smtp_mime_field_new(SMTP_FIELD_FROM, $1);
+	}
+
+	| MESSAGE_ID
+	{
+		print("--->FLD : MESSAGE_ID \n");
+		return smtp_mime_field_new(SMTP_FIELD_MESSAGE_ID, $1);
+	}
+	| TO
+	{
+		print("--->FLD : TO \n");
+		return smtp_mime_field_new(SMTP_FIELD_TO, $1);
+	}
+	;
+
+
+FLDS	: FLD
+	{
+		print("--->FLDS: FLD\n" );
+		struct smtp_mime_fields * flds=smtp_mime_fields_new_empty();
+		if (flds != NULL ) {
+			smtp_mime_fields_add(flds, $1);
+		}
+		
+		return flds; 
+
+	}
+	| FLDS FLD
+	{
+		print("--->FLDS : FLDS FLD\n" );
+		if($1 != NULL) {
+			smtp_mime_fields_add($1, $2);
+		}
+		return $1;
+	}
+	;
+
+Header	: FLDS eoh
+	{
+		print("Header : FLDS eoh\n ");
+		return $1;
+	}
+	;
+
+
+Header_OK: Header
+	{
+		print("Header_OK : Header\n");
+		return $1;
+	}
+	! BAD_Header
+	{
+		print("Header_OK ! BAD_Header\n");
+	}
+	;
+
+TEXT	: text 
+	{
+		print("--->TEXT: text\n");
+		struct smtp_mime_text_stream *s;
+		s = smtp_mime_text_stream_new($1->encoding, $1->encoded );
+		smtp_mime_body_parse ($1->data, $1->length, $1->encoding, s);
+		return s;
+	}
+
+	| TEXT text 
+	{
+		print("--->TEXT: TEXT text\n");
+		smtp_mime_body_parse ($2->data, $2->length,  $2->encoding, $1);
+		return $1;
+
+	}
+	;
+
+
+TEXT_OK	: TEXT
+	{
+		print("--->TEXT_OK : TEXT\n");
+		return $1;
+	}
+	! BAD_TEXT
+	{
+		print("--->TEXT_OK !  BAD_TEXT\n ");
+	}
+	;
+
+
+Body	: TEXT_OK eot
+	{
+		print("--->Body : TEXT eot\n");
+		struct smtp_mime_data *md;
+		md = smtp_mime_data_new(SMTP_MIME_DATA_TEXT,	//int dt_type, 
+					$1->ts_encoding,	//int dt_encoding,
+					$1->ts_encoded,		//int dt_encoded, 
+					NULL,			//$1->buf,		//const char * dt_data, 
+					$1->ts_length,		//$1->buf_len,		//size_t dt_length, 
+
+					//todo, wyong, 20231021 
+					NULL			//char * dt_filename
+					);
+		return md;
+	}
+	;
+
+SIG_MSG : Header_OK( get_body_type_from_fields($1) == SMTP_MIME_SINGLE ) Body 
+	{
+		print("--->SIG_MSG: Header_OK Body\n");
+		struct mailmime *mm;
+		mm = smtp_mime_new(SMTP_MIME_SINGLE,
+				    NULL,	//const char * mm_mime_start,
+					0,	//size_t mm_length,
+				    $1,		//struct smtp_mime_fields * mm_mime_fields,
+				    get_content_type_from_fields($1),	//struct smtp_mime_content * mm_content_type,
+
+				    $2, 	//struct smtp_mime_data * mm_body,
+
+				    NULL,		//struct smtp_mime_data * mm_preamble,
+				    NULL,		//struct smtp_mime_data * mm_epilogue,
+				    NULL,		//clist * mm_mp_list,
+
+				    NULL,	//struct smtp_fields * mm_fields,
+				    NULL	//struct mailmime * mm_msg_mime
+				) ;
+		return mm;
+	}
+	;
+
+	
+MSGS: 	MSG 
+	{		
+		print("--->MSGS: MSG\n");
+		struct mailmime_list *ml = mailmime_list_new ();
+		if ( ml != NULL ) {
+			add_to_mailmime_list (ml, $1) ; 
+		}
+		return ml;
+
+	}
+	| MSGS MSG 
+	{
+		print("--->MSGS: MSGS MSG\n");
+		if ($1 != NULL)  {
+			add_to_mailmime_list($1, $2);
+		}
+		return $1;
+	}
+	;
+
+
+MLT_MSG	: Header_OK( get_body_type_from_fields($1) == SMTP_MIME_MULTIPLE) Body MSGS eob Body
+	{
+		print("--->MLT_MSG: Header_OK Body MSGS eob Body\n");
+		struct mailmime *mm;
+		mm = smtp_mime_new (	SMTP_MIME_MULTIPLE,
+					NULL,		//const char * mm_mime_start,
+					0,		//size_t mm_length,
+					$1,		//struct smtp_mime_fields * mm_mime_fields,
+					get_content_type_from_fields($1),//struct smtp_mime_content * mm_content_type,
+					NULL, 		//struct smtp_mime_data * mm_body,
+
+					$2,		//struct smtp_mime_data * mm_preamble,
+					$5,		//struct smtp_mime_data * mm_epilogue,
+					$3,		//clist * mm_mp_list,
+
+					NULL,		//struct smtp_fields * mm_fields,
+					NULL		//struct mailmime * mm_msg_mime
+				) ;
+
+		return mm; 
+	}
+	;
+
+
+RFC_MSG	: Header_OK( get_body_type_from_fields($1) == SMTP_MIME_MESSAGE) MSG
+	{
+		print("--->RFC_MSG: Header_OK MSG\n");
+		struct mailmime *mm;
+		struct smtp_mime_content_type * ct = get_content_type_from_fields($1);
+		mm = smtp_mime_new( SMTP_MIME_MESSAGE,
+				    NULL,	//const char * mm_mime_start,
+				    0,		//size_t mm_length,
+				    $1,			//struct smtp_mime_fields * mm_mime_fields,
+					ct,	//struct smtp_mime_content * mm_content_type,
+
+				    NULL, 	//struct smtp_mime_data * mm_body,
+
+				    NULL,		//struct smtp_mime_data * mm_preamble,
+				    NULL,		//struct smtp_mime_data * mm_epilogue,
+				    NULL,		//clist * mm_mp_list,
+
+				    NULL,	//struct smtp_fields * mm_fields,
+				    $2		//struct mailmime * mm_msg_mime
+				) ;
+		return mm;
+	}
+	;
+
+
+MSG	: SIG_MSG
+	{
+		print("--->MSG: SIG_MSG\n");
+		return $1;
+	}
+	| RFC_MSG 
+	{
+		print("--->MSG: RFC_MSG\n");
+		return $1;
+	}
+	| MLT_MSG
+	{
+		print("--->MSG: MLT_MSG\n");
+		return $1;
+	}
+	;
+	
+
+MESG	: MSG eom
+	{
+		print("--->MESG: MSG eom\n");
+		return $1;
+	}
+	;
+
+
+MESG_OK	: MESG
+	{
+		print("MESG_OK: MESG\n");
+		return $1;
+	}
+	! BAD_MESG
+	{
+		print("MESG_OK! BAD_MESG\n");
+		return 0;
+	}
+	;
+
+/****************************** COMD *****************************************/
+COMD:	EHLO_REQ_OK
+	{
+		print("--->COMD: EHLO\n");
+		return 0;
+	}
+	| HELO_REQ_OK
+	{
+		print("--->COMD: HELO\n");
+		return 0;
+	}
+	| USER_REQ_OK
+	{
+		print("--->COMD: USER\n");
+		return 0;
+	}
+	| PASS_REQ_OK
+	{
+		print("--->COMD: PASS\n");
+		return 0;
+	}
+	| AUTH_REQ_OK
+	{
+		print("--->COMD: AUTH\n");
+		return 0;
+	}	
+	| MAIL_REQ_OK
+	{
+		print("--->COMD: MAIL\n");
+		return 0;
+	}
+	| SEND_REQ_OK 
+	{
+		print("--->COMD: SEND\n");
+		return 0;
+	}
+	| SAML_REQ_OK   
+	{	
+		print("--->COMD: SAML\n");
+		return 0;
+	}
+	| SOML_REQ_OK  
+	{
+		print("--->COMD: SOML\n");
+		return 0;
+	}
+	| RCPT_REQ_OK  
+	{
+		print("--->COMD: RCPT\n");
+		return 0;
+	}	
+	| RSET_REQ_OK  
+	{
+		print("--->COMD: RSET\n");
+		return 0;
+	}	
+	| EXPN_REQ_OK  
+	{
+		print("--->COMD: EXPN\n");
+		return 0;
+	}	
+	| VRFY_REQ_OK  
+	{
+		print("--->COMD: VRFY\n");
+		return 0;
+	}	
+	| DATA_REQ_OK  
+	{
+		print("--->COMD: DATA\n");
+		return 0;
+	}
+	| MESG_OK
+	{
+		print("--->COMD: MESG\n");
+		return 0;
+	}
+	| QUIT_REQ_OK  
+	{
+		print("--->COMD: QUIT\n");
+		return 0;
+	}
+	| ACK {
+		print("--->COMD: ACK \n");
+		return 0;
+	}
+	;
+
+COMDS:	COMD	
+	{
+		print("--->COMDS: COMD\n");
+		return 0;
+	}
+	| COMDS COMD 
+	{
+		print("--->COMDS:COMDS COMD\n");
+		return 0;
+	}
+	! BAD_COMDS
+	{
+		print("--->COMDS! BAD_COMDS\n");
+		return 0;
+	}
+	/*
+	| OTHERS 
+	{
+		print("--->COMDS:OTHERS ");
+		return 0;
+	}
+	*/
+	;
+
+
+SMTP_CON: COMDS 
+	{
+		print("--->SMTP_CON: COMDS \n");
+		return 0;
+	}
+	;
+
+_target	: SMTP_CON 
+	{
+		print("---> Target : SMTP_CON\n");
+		return 0;
+	}
+	;
+
+//wyong, 20231116 
+void nel_smtp_info_init(struct smtp_info *info)
+{
+	print("nel_smtp_info_init");
+	info->user=(void *)new(sizeof(struct smtp_info_user));
+	if(info->user == 0) {
+		print("nel_smtp_info_init: nel_malloc failed");		
+	}
+
+	((struct smtp_info_user *)info->user)->vrfy_cnt = 0;
+	print("nel_smtp_info_init, vrfy_cnt = ", ((struct smtp_info_user *)info->user)->vrfy_cnt);
+
+	return;
+}
+
+void nel_smtp_info_free(struct smtp_info *info)
+{
+	print("nel_smtp_info_free");
+	if(info->user != 0){
+		delete(info->user);
+	}
+}
+
+init {
+	//wyong, 20231116 
+	//register_init(link, nel_smtp_info_init);
+	//register_free(link, nel_smtp_info_free);
+
+	register_free(ehlo_req, smtp_cmd_ehlo_free);
+	register_free(helo_req, smtp_cmd_helo_free); 
+
+	register_free(auth_req, smtp_cmd_auth_free); 
+	register_free(user_req, smtp_cmd_user_free); 
+	register_free(pass_req, smtp_cmd_passwd_free); 
+
+	register_free(mail_req, smtp_cmd_mail_free); 
+	register_free(rcpt_req, smtp_cmd_rcpt_free); 
+	register_free(saml_req, smtp_cmd_saml_free); 
+	register_free(send_req, smtp_cmd_send_free); 
+	register_free(soml_req, smtp_cmd_soml_free); 
+
+	register_free(data_req, smtp_cmd_data_free); 
+	register_free(rset_req, smtp_cmd_rset_free); 
+
+	register_free(vrfy_req, smtp_cmd_vrfy_free); 
+	register_free(expn_req, smtp_cmd_expn_free); 
+
+	register_free(quit_req, smtp_cmd_quit_free); 
+
+	register_free(ack, smtp_ack_free); 
+	register_free(vrfy_ack, smtp_ack_vrfy_free);
+	register_free(expn_ack, smtp_ack_expn_free); 
+
+	//todo, wyong, 20231116 
+	//register_free(Header_OK, smtp_mime_fields_free);
+	//register_free(text, smtp_mime_text_free);
+	//register_free(TEXT, smtp_mime_text_stream_free); 
+	//register_free(Body, smtp_mime_data_free); 
+
+	//register_free(MSG, smtp_mime_free);
+	//register_free(MESG, smtp_mime_free);
+	
+}
+
+main{
+	//commands
+	ehlo_id=idof("ehlo_req");
+	ack_ehlo_id=idof("ehlo_ack");
+
+	send_id = idof("send_req");
+	helo_id=idof("helo_req");
+	user_id=idof("user_req");
+	pass_id=idof("pass_req");
+	auth_id=idof("auth_req");
+	mail_id=idof("mail_req");
+	soml_id=idof("soml_req");
+	saml_id=idof("saml_req");
+	rset_id=idof("rset_req");
+
+	expn_id=idof("expn_req");
+	ack_expn_id=idof("expn_ack");
+
+	vrfy_id=idof("vrfy_req");
+	ack_vrfy_id=idof("vrfy_ack");
+
+	//help_id=idof("help_req");
+	//turn_id=idof("turn_req");
+	rcpt_id=idof("rcpt_req");
+	data_id=idof("data_req");
+	quit_id=idof("quit_req");
+
+	ack_id=idof("ack");
+
+	//message 
+	from_id=idof("from");
+	to_id=idof("to");
+	content_type_id=idof("content_type");
+	dsp_id=idof("content_disposition");
+	message_id_id=idof("message_id");
+
+	text_id=idof("text");
+	eoh_id=idof("eoh");
+	eot_id=idof("eot");
+	eob_id=idof("eob");
+	eom_id=idof("eom");
+
+	//link 
+	end_id=idof("end");
+	info_id=idof("link");
+
+}

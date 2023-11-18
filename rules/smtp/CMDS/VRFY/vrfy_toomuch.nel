@@ -1,0 +1,23 @@
+/*
+ * vrfy_toomuch.nel
+ * $Id: vrfy_toomuch.nel,v 1.3 2005/11/11 03:44:14 wyong Exp $
+ */
+
+static int nid = 45;
+static char des[] = "the count of VRFY command can't be large then N.";
+int 	max_vrfy_cnt = 10;
+
+event struct smtp_atk	 *VRFY_TOOMUCH;
+VRFY_TOOMUCH: vrfy_req ( ++((struct smtp_info_user *)$0->user)->vrfy_cnt > max_vrfy_cnt )
+	{
+		print( "found too much of VRFY command !\n");
+		smtp_deny( $0 );
+	}
+	;
+
+BAD_VRFY_REQ: VRFY_TOOMUCH
+	{
+
+	}
+	;
+

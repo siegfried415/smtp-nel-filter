@@ -1,0 +1,13 @@
+/*
+ * expn_block.nel
+ * $Id: expn_block.nel,v 1.2 2005/11/28 02:16:35 wyong Exp $
+ */
+
+static int nid = 50;
+static char des[] = "drop EXPN command for security problem.";
+
+init{
+	var_disable_expn_cmd = 1;
+}
+
+

@@ -1,0 +1,22 @@
+/*
+ * ehlo_match.nel
+ * $Id: ehlo_nel_match.nel,v 1.3 2005/11/16 06:19:18 wyong Exp $
+ */
+
+static int nid = 5;
+static char des[] = "those EHLO command include 'foo' will not be allowed!";
+event struct smtp_atk	*EHLO_BAD_STRING;
+
+EHLO_BAD_STRING: ehlo_req($1->host_name[0, $1->host_name_len] ~ /foo/ ) 
+	{
+		print("found \"foo\" in ehlo command, this maybe a attack!\n");
+		smtp_deny($0); 
+	}
+	;
+
+
+BAD_EHLO_REQ: EHLO_BAD_STRING
+	{
+
+	}
+	;
