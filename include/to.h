@@ -1,8 +1,9 @@
 #ifndef TO_H
 #define TO_H
 
-/* To: =?gb2312?B?z8TT8A==?= <xia_yu@neusoft.com> */
-struct smtp_to
+#include "analysis.h" 
+
+struct smtp_msg_to
 {
 #ifdef USE_NEL
 	NEL_REF_DEF
@@ -18,12 +19,12 @@ void smtp_msg_to_init (
 #endif
 	);
 
-void smtp_msg_to_free (struct smtp_to *to);
+void smtp_msg_to_free (struct smtp_msg_to *to);
 
-struct smtp_to *smtp_msg_to_new (struct smtp_address_list *to_addr_list);
+struct smtp_msg_to *smtp_msg_to_new (struct smtp_address_list *to_addr_list);
 
 int smtp_msg_to_parse (struct smtp_info *psmtp,
 		       const char *message, size_t length,
-		       size_t * index, struct smtp_to **result);
+		       size_t * index, struct smtp_msg_to **result);
 
 #endif

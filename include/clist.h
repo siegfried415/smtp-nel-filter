@@ -1,6 +1,3 @@
-/*
- * $Id: clist.h,v 1.3 2005/11/08 17:14:36 wyong Exp $
- */
 
 #ifndef CLIST_H
 #define CLIST_H

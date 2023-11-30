@@ -1,7 +1,3 @@
-/*
- * $Id: mmapstring.h,v 1.2 2005/11/29 06:30:30 xiay Exp $
- */
-
 #ifndef __MMAP_STRING_H__
 #define __MMAP_STRING_H__
 

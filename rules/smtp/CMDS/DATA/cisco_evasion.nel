@@ -1,0 +1,20 @@
+static int nid = 135;
+static char des[] ="Cisco PIX Firewall SMTP Content Filtering Evasion Vulnerability!";
+static char ref[] ="CVE-2000-1022";
+
+event struct smtp_atk CISCO_EVASION;
+CISCO_EVASION: data_req($0->mail_state < SMTP_MAIL_STATE_RCPT ) ack($2->code == 503) 
+	{
+		print("There maybe a Cisco PIX Firewall SMTP Content Filting Evasion Attack!\n");
+		smtp_deny ( $0 ); 
+	}
+	;
+
+
+BAD_COMDS: CISCO_EVASION
+	{
+
+	}
+	;
+
+

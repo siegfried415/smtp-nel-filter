@@ -97,4 +97,14 @@ struct smtp_mime_content_type *smtp_mime_get_content_type_of_text (void);
 void smtp_mime_content_type_free (struct smtp_mime_content_type
 				  *content_type);
 
+int
+get_body_type_from_content_type (struct smtp_mime_content_type *content_type);
+
+void
+smtp_mime_content_type_init (
+#ifdef USE_NEL
+                                    struct nel_eng *eng
+#endif
+        );
+
 #endif

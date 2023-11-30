@@ -5,7 +5,6 @@
 #include "clist.h"
 #include "analysis.h"
 
-
 enum
 {
 	SMTP_MIME_DISPOSITION_TYPE_ERROR,
@@ -64,24 +63,38 @@ smtp_mime_disposition_type_parse (const char *message, size_t length,
 				  size_t * index,
 				  struct smtp_mime_disposition_type **result);
 
-int smtp_mime_disposition_guess_type (const char *message, size_t length,
-				      size_t index);
+int 
+smtp_mime_disposition_guess_type (const char *message, 
+					size_t length,
+				      	size_t index);
 
 
-struct smtp_mime_disposition *smtp_mime_disposition_new_with_data (int type,
-								   char
-								   *filename,
-								   char
-								   *creation_date,
-								   char
-								   *modification_date,
-								   char
-								   *read_date,
-								   size_t
-								   size);
+struct smtp_mime_disposition *
+smtp_mime_disposition_new_with_data (int type,
+					char *filename,
+					char *creation_date,
+					char *modification_date,
+					char *read_date,
+					size_t size);
 
-struct smtp_mime_disposition *smtp_mime_disposition_new_filename (int type,
-								  char
-								  *filename);
+struct smtp_mime_disposition *
+smtp_mime_disposition_new_filename (int type, char *filename);
+struct smtp_mime_single_fields; 
+struct smtp_mime_disposition;
+
+void
+smtp_mime_disposition_single_fields_init (
+			struct smtp_mime_single_fields *single_fields,
+			struct smtp_mime_disposition *fld_disposition);
+
+void
+smtp_mime_disposition_free (struct smtp_mime_disposition *dsp);
+
+void
+smtp_mime_disposition_init (
+#ifdef USE_NEL
+                                   struct nel_eng *eng
+#endif
+        ) ;
 
 #endif

@@ -1,17 +1,8 @@
-
-
-/*
- * $Id: in_reply_to.c,v 1.4 2005/11/29 06:29:26 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "in_reply_to.h"
@@ -25,7 +16,7 @@ smtp_in_reply_to_new (clist * mid_list)
 	in_reply_to = malloc (sizeof (*in_reply_to));
 	if (in_reply_to == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_in_reply_to_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_in_reply_to_new: MALLOC pointer=%p\n",
 		    in_reply_to);
 
 	in_reply_to->mid_list = mid_list;
@@ -41,7 +32,7 @@ smtp_in_reply_to_free (struct smtp_in_reply_to *in_reply_to)
 		       (clist_func) smtp_msg_id_free, NULL);
 	clist_free (in_reply_to->mid_list);
 	free (in_reply_to);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_in_reply_to_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_in_reply_to_free: FREE pointer=%p\n",
 		    in_reply_to);
 }
 
@@ -72,22 +63,6 @@ smtp_in_reply_to_parse (const char *message, size_t length,
 	int r;
 
 	cur_token = *index;
-
-/*
-  r = mailimf_token_case_insensitive_parse(message, length,
-					   &cur_token, "In-Reply-To");
-  if (r != SMTP_NO_ERROR) {
-    res = r;
-    goto err;
-  }
-
-  r = smtp_colon_parse(message, length, &cur_token);
-  if (r != SMTP_NO_ERROR) {
-    res = r;
-    goto err;
-  }
-*/
-
 	r = smtp_msg_id_list_parse (message, length, &cur_token,
 				    &msg_id_list);
 	if (r != SMTP_NO_ERROR) {

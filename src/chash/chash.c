@@ -1,7 +1,3 @@
-/*
- * $Id: chash.c,v 1.4 2005/12/07 09:44:31 wyong Exp $
- */
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,19 +11,6 @@
 static inline unsigned int
 chash_func (const char *key, unsigned int len)
 {
-#if 0
-	register unsigned int c = 0, t;
-	register const char *k = key;
-
-	while (len--) {
-		c += (c << 4) + *k++;
-		if ((t = c & 0xF0000000)) {
-			c ^= t >> 24;
-			c ^= t;
-		}
-	}
-	return c;
-#endif
 	register unsigned int c = 5381;
 	register const char *k = key;
 
@@ -46,7 +29,6 @@ chash_dup (const void *data, unsigned int len)
 	r = (char *) malloc (len);
 	if (!r)
 		return NULL;
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_dup: MALLOC pointer=%p\n", r);
 
 	memcpy (r, data, len);
 	return r;
@@ -61,7 +43,6 @@ chash_new (unsigned int size, int flags)
 	h = (chash *) malloc (sizeof (chash));
 	if (h == NULL)
 		return NULL;
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_new: MALLOC pointer=%p\n", h);
 
 	if (size < CHASH_DEFAULTSIZE)
 		size = CHASH_DEFAULTSIZE;
@@ -72,10 +53,8 @@ chash_new (unsigned int size, int flags)
 					      sizeof (struct chashcell *));
 	if (h->cells == NULL) {
 		free (h);
-		//DEBUG_SMTP(SMTP_MEM_1, "chash_new: FREE pointer=%p\n", h);
 		return NULL;
 	}
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_new: CALLOC pointer=%p\n", h->cells);
 
 	h->size = size;
 	h->copykey = flags & CHASH_COPYKEY;
@@ -141,7 +120,6 @@ chash_set (chash * hash,
 					goto err;
 
 				free (iter->value.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_set: FREE pointer=%p\n", iter->value.data);
 
 				iter->value.data = data;
 				iter->value.len = value->len;
@@ -176,7 +154,6 @@ chash_set (chash * hash,
 	cell = (struct chashcell *) malloc (sizeof (struct chashcell));
 	if (cell == NULL)
 		goto err;
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_set: MALLOC pointer=%p\n", cell);
 
 	if (hash->copykey) {
 		cell->key.data = chash_dup (key->data, key->len);
@@ -206,12 +183,10 @@ chash_set (chash * hash,
       free_key_data:
 	if (hash->copykey) {
 		free (cell->key.data);
-		//DEBUG_SMTP(SMTP_MEM_1, "chash_set: FREE pointer=%p\n", cell->key.data);
 	}
 
       free:
 	free (cell);
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_set: FREE pointer=%p\n", cell);
 
       err:
 	return -1;
@@ -246,11 +221,9 @@ chash_delete (chash * hash, chashdatum * key, chashdatum * oldvalue)
 				hash->cells[indx] = iter->next;
 			if (hash->copykey) {
 				free (iter->key.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_delete: FREE pointer=%p\n", iter->key.data);
 			}
 			if (hash->copyvalue) {
 				free (iter->value.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_delete: FREE pointer=%p\n", iter->value.data);
 			}
 			else {
 				if (oldvalue != NULL) {
@@ -259,7 +232,6 @@ chash_delete (chash * hash, chashdatum * key, chashdatum * oldvalue)
 				}
 			}
 			free (iter);
-			//DEBUG_SMTP(SMTP_MEM_1, "chash_delete: FREE pointer=%p\n", iter);
 
 			hash->count--;
 			return 0;
@@ -285,21 +257,16 @@ chash_free (chash * hash)
 			next = iter->next;
 			if (hash->copykey) {
 				free (iter->key.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_free: FREE pointer=%p\n", iter->key.data);
 			}
 			if (hash->copyvalue) {
 				free (iter->value.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_free: FREE pointer=%p\n", iter->value.data);
 			}
 			free (iter);
-			//DEBUG_SMTP(SMTP_MEM_1, "chash_free: FREE pointer=%p\n", iter);
 			iter = next;
 		}
 	}
 	free (hash->cells);
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_free: FREE pointer=%p\n", hash->cells);
 	free (hash);
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_free: FREE pointer=%p\n", hash);
 }
 
 
@@ -316,14 +283,11 @@ chash_clear (chash * hash)
 			next = iter->next;
 			if (hash->copykey) {
 				free (iter->key.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_clear: FREE pointer=%p\n", iter->key.data);
 			}
 			if (hash->copyvalue) {
 				free (iter->value.data);
-				//DEBUG_SMTP(SMTP_MEM_1, "chash_clear: FREE pointer=%p\n", iter->value.data);
 			}
 			free (iter);
-			//DEBUG_SMTP(SMTP_MEM_1, "chash_clear: FREE pointer=%p\n", iter);
 			iter = next;
 		}
 	}
@@ -384,7 +348,6 @@ chash_resize (chash * hash, unsigned int size)
 					      sizeof (struct chashcell *));
 	if (!cells)
 		return -1;
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_resize: CALLOC pointer=%p\n", cells);
 
 	/* browse initial hash and copy items in second hash */
 	for (indx = 0; indx < hash->size; indx++) {
@@ -398,7 +361,6 @@ chash_resize (chash * hash, unsigned int size)
 		}
 	}
 	free (hash->cells);
-	//DEBUG_SMTP(SMTP_MEM_1, "chash_resize: FREE pointer=%p\n", hash->cells);
 	hash->size = size;
 	hash->cells = cells;
 

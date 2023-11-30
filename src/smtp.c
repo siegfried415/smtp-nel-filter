@@ -1,9 +1,3 @@
-
-/*
- * smtp.c
- * $Id: smtp.c,v 1.1.1.1 2005/02/19 12:57:22 wyong Exp $
- */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,9 +9,6 @@
 #include <setjmp.h>
 #include <assert.h>
 #include <stdarg.h>
-//#include <iconv.h>
-
-
 #include <syslog.h>
 #include <pcap.h>
 #include <config.h>
@@ -33,6 +24,7 @@
 #include "mem_pool.h"
 #include "tcp.h"
 #include "smtp.h"
+#include "mime.h"
 #include "message.h"
 #include "address.h"
 #include "auth.h"
@@ -54,7 +46,8 @@
 #include "from.h"
 #include "to.h"
 #include "command.h"
-
+#include "body.h" 
+#include "disposition.h" 
 #include "content-type.h"
 
 #ifdef USE_NEL
@@ -67,10 +60,10 @@ extern struct nel_eng *eng;
 #endif
 
 /* for protocol.nel */
-short enable_smtp_ack_check = 1;
-short max_smtp_ack_multiline_count = 32;
-short max_smtp_req_len = 512;
-short max_smtp_ack_len = 512;
+int enable_smtp_ack_check = 1;
+int max_smtp_ack_multiline_count = 32;
+int max_smtp_req_len = 512;
+int max_smtp_ack_len = 512;
 
 int var_smtpd_crate_limit;
 int var_smtpd_cconn_limit;
@@ -97,40 +90,21 @@ static struct smtp_info **smtp_info_table;
 static struct smtp_info *free_smtps;
 static unsigned int app_packet = 0;
 static unsigned int app_packet_err = 0;
-extern char *adres (struct tcp_packet *cur_pkt);
 
 
-//wyong, 20231025 
 void
-smtp_deny (struct smtp_info *psmtp /* , char *message, ...  */ )
+smtp_deny (struct smtp_info *psmtp)
 {
-	va_list args;
 	if (psmtp != NULL) {
-		//va_start (args, message);
 		psmtp->permit |= SMTP_PERMIT_DENY;
-		//nel_do_print(stderr, message, args);
-		//va_end (args);
 	}
 }
 
-/*
-void smtp_warn(struct smtp_info *psmtp, char *message, ... )
-{
-        va_list args;
-        if(psmtp!= NULL) {
-                va_start (args, message);
-                //nel_do_print(stderr, message, args);
-                va_end (args);
-        }
-}
-*/
-
 
 /*
- * Function:    smtp_close_connection (struct neti_tcp_stream *, struct smtp_info *)
+ * Function:    smtp_close_connection (struct smtp_info *)
  * Purpose:     close smtp connection
- * Arguments:   ptcp => tcp connection info
- *              psmtp => smtp stream info
+ * Arguments:   psmtp => smtp stream info
  * Return:      void funtion
  */
 void
@@ -156,8 +130,7 @@ smtp_close_connection (struct smtp_info *psmtp)
 
 
 
-
-//todo, rename to sync_svr_data, wyong, 20231003 
+/*
 int
 reply_to_client (struct smtp_info *psmtp, char *str)
 {
@@ -178,16 +151,13 @@ reply_to_client (struct smtp_info *psmtp, char *str)
 	//DEBUG_SMTP(SMTP_DBG, "wrlen = %d\n", wrlen);
 	return SMTP_NO_ERROR;
 }
+*/
 
-
-//wyong, 20231003 
 int
 sync_client_data (struct smtp_info *psmtp, int processed_data_len)
 {
 	int dis, len;
 
-	//xiayu 2005.12.9 bugfix for long headers
-	//change "SMTP_BUF_LEN" into "(psmtp->cli_buf_len-1)"
 	if (psmtp->cli_data < psmtp->cli_buf
 	    || psmtp->cli_data > psmtp->cli_buf + (psmtp->cli_buf_len - 1)
 	    || psmtp->cli_data_len < 0
@@ -198,12 +168,11 @@ sync_client_data (struct smtp_info *psmtp, int processed_data_len)
 		DEBUG_SMTP (SMTP_DBG, "buffer overflow: cli_data_len = %d\n",
 			    psmtp->cli_data_len);
 		DEBUG_SMTP (SMTP_DBG,
-			    "buffer overflow: cli_data - cli_buf = %d\n",
+			    "buffer overflow: cli_data - cli_buf = %ld\n",
 			    psmtp->cli_data - psmtp->cli_buf);
 		return SMTP_ERROR_BUFFER;
 	}
 
-	//wyong, 20231003 
 	if (processed_data_len > psmtp->cli_data_len) {
 		DEBUG_SMTP (SMTP_DBG,
 			    "processed_data_len(%d) is larger then cli_data_len(%d)\n",
@@ -235,14 +204,13 @@ sync_client_data (struct smtp_info *psmtp, int processed_data_len)
 
 
 void
-reset_client_buf (struct smtp_info *sp, int *index)
+reset_client_buf (struct smtp_info *sp, size_t *index)
 {
 	sp->cli_data = sp->cli_buf;
 	sp->cli_data_len = 0;
 	*index = 0;
 }
 
-//wyong, 20231016 
 int
 sync_server_data (struct smtp_info *psmtp, int processed_data_len)
 {
@@ -278,7 +246,7 @@ sync_server_data (struct smtp_info *psmtp, int processed_data_len)
 
 
 void
-reset_server_buf (struct smtp_info *sp, int *index)
+reset_server_buf (struct smtp_info *sp, size_t *index)
 {
 	sp->svr_data = sp->svr_buf;
 	sp->svr_data_len = 0;
@@ -287,7 +255,7 @@ reset_server_buf (struct smtp_info *sp, int *index)
 
 
 int
-parse_smtp_client (struct smtp_info *psmtp /*, struct tcp_packet *tp */ )
+parse_smtp_client (struct smtp_info *psmtp )
 {
 	if (psmtp->curr_parse_state == SMTP_STATE_UNCERTAIN
 	    || psmtp->curr_parse_state == SMTP_STATE_PARSE_COMMAND) {
@@ -309,17 +277,15 @@ parse_smtp_client (struct smtp_info *psmtp /*, struct tcp_packet *tp */ )
 }
 
 int
-parse_smtp_server (struct smtp_info *psmtp /*, struct tcp_packet *tp */ )
+parse_smtp_server (struct smtp_info *psmtp )
 {
-	return parse_smtp_ack (psmtp /*, tp */ );
+	return parse_smtp_ack (psmtp);
 }
 
 void
 free_smtp_info (struct smtp_info *psmtp)
 {
 	int hash_index = psmtp->hash_index;
-
-	//xiayu 2005.12.9 bugfix for long headers
 	if (psmtp->cli_buf) {
 		free (psmtp->cli_buf);
 	}
@@ -345,7 +311,6 @@ free_smtp_info (struct smtp_info *psmtp)
 		pop_part_stack (psmtp);
 	}
 
-	//wyong, 20231009 
 	free (psmtp->part_stack);
 	free (psmtp->auth_allow);
 	free (psmtp->cmd_allow);
@@ -400,22 +365,18 @@ new_smtp_info (struct tcp_stream *a_tcp)
 	psmtp->recipient = NULL;
 
 
-	/* ³õÊ¼»¯Ò»Ð©Öµ */
-	//xiayu 2005.12.9 bugfix for long headers
 	psmtp->cli_buf_len = SMTP_BUF_LEN + 1;
 	psmtp->cli_buf = (unsigned char *) malloc (SMTP_BUF_LEN + 1);
 	if (psmtp->cli_buf == NULL) {
-		return;
+		return (struct smtp_info *) 0;
 	}
 
 	psmtp->cli_data = psmtp->cli_buf;
 	psmtp->cli_data_len = 0;
 
-	//todo, svr_buf ?  
 	psmtp->svr_data = psmtp->svr_buf;
 	psmtp->svr_data_len = 0;
 
-	//wyong, 20231009
 	psmtp->part_stack =
 		malloc (SMTP_MSG_STACK_MAX_DEPTH * sizeof (struct smtp_part));
 	memset ((char *) psmtp->part_stack, '\0',
@@ -423,21 +384,16 @@ new_smtp_info (struct tcp_stream *a_tcp)
 	psmtp->part_stack_top = 0;
 	psmtp->new_part_flag = 1;
 
-	//wyong, 20231009 
 	psmtp->auth_allow = malloc (SMTP_AUTH_TYPE_NUM);
 	memset ((char *) psmtp->auth_allow, '\0', SMTP_AUTH_TYPE_NUM);
 
-	//wyong, 20231009
 	psmtp->cmd_allow = malloc (SMTP_ALLOW_TYPE_NUM * sizeof (int));
 	memset ((char *) psmtp->cmd_allow, '\0',
 		SMTP_ALLOW_TYPE_NUM * sizeof (int));
 
 
 #ifdef  USE_NEL
-	//psmtp->count = 0;       //bugfix, wyong, 2005.10.27
 	NEL_REF_INIT (psmtp);
-
-	/* init env last */
 	nel_env_init (eng, &(psmtp->env), info_id, psmtp);
 #endif
 
@@ -480,9 +436,6 @@ search_smtp_info (struct tcp_stream *a_tcp)
 	return psmtp;
 }
 
-extern unsigned int tcp_packets;
-
-//wyong, 20231003 
 int
 process_smtp (struct tcp_stream *a_tcp, size_t size, int to_client,
 	      int conn_type)
@@ -521,7 +474,7 @@ process_smtp (struct tcp_stream *a_tcp, size_t size, int to_client,
 		//printf("--->CLOSE Event!\n");
 		//type = TOKEN_CLOSE;
 
-		//todo, don't forget call nel_env_analysis with end_id, wyong, 20231023 
+		//todo, don't forget call nel_env_analysis with end_id
 		//id = end_id;
 		smtp_close_connection (psmtp);
 		ret = 0;
@@ -530,7 +483,7 @@ process_smtp (struct tcp_stream *a_tcp, size_t size, int to_client,
 	case TCP_CONN_DATA:
 		//libnids fires data when half_stream recevied data, but we 'd like to parse 
 		//smtp data from point of view of sending half_stream, so here we exchange 
-		//client and server. wyong, 20231015 
+		//client and server. 
 		if (size > 0) {
 			if (to_client) {
 				used_len =
@@ -576,7 +529,7 @@ process_smtp (struct tcp_stream *a_tcp, size_t size, int to_client,
 
 	case TCP_CONN_ASST:
 	case TCP_CONN_DUP:
-		//nel_diagnostic("--->process_smtp(tcp_packets=%d, len=%d, from_client=%d, dataptr=%s)\n", tcp_packets, tp->dlen, tp->from_client, tp->dataptr);
+		//printf("--->process_smtp(app_packet=%d, len=%d, from_client=%d, dataptr=%s)\n", app_packet, tp->dlen, tp->from_client, tp->dataptr);
 		//id = data_id; 
 		break;
 
@@ -606,8 +559,7 @@ smtp_cleanup (void)
 	if (smtp_info_pool)
 		free (smtp_info_pool);
 
-	//mesg(M_INFO, "smtp packet stat: %u err of %u packet", 
-	//              app_packet_err, app_packet);
+	//printf("smtp packet stat: %u err of %u packet", app_packet_err, app_packet);
 
 	return;
 }
@@ -638,27 +590,6 @@ smtp_init (void)
 	smtp_info_pool[max_smtps].next_free = 0;
 	free_smtps = smtp_info_pool;
 
-#ifdef USE_NEL
-	//nel_func_name_call(eng, (char *)&end_id, "nel_id_of", "end");
-	//nel_func_name_call(eng, (char *)&smtp_id, "nel_id_of", "smtp");
-	//nel_func_name_call(eng, (char *)&info_id, "nel_id_of", "link");
-
-	//nel_func_name_call(eng, (char *)&ack_id, "nel_id_of", "ack");
-
-	//nel_func_name_call(eng, (char *)&help_id, "nel_id_of", "help_req");
-	//nel_func_name_call(eng, (char *)&turn_id, "nel_id_of", "turn_req");
-
-	//nel_func_name_call(eng, (char *)&message_id_id, "nel_id_of", "message_id");
-	//nel_func_name_call(eng, (char *)&from_id, "nel_id_of", "from");
-	//nel_func_name_call(eng, (char *)&content_type_id, "nel_id_of", "content_type");
-
-	//nel_func_name_call(eng, (char *)&eoh_id, "nel_id_of", "eoh");
-	//nel_func_name_call(eng, (char *)&eot_id, "nel_id_of", "eot");
-	//nel_func_name_call(eng, (char *)&eob_id, "nel_id_of", "eob");
-	//nel_func_name_call(eng, (char *)&eom_id, "nel_id_of", "eom");
-	//nel_func_name_call(eng, (char *)&text_id, "nel_id_of", "text");
-
-#endif
 	//release_smtp_event (NULL);
 	//release_smtp_stream_buf (NULL);
 	//release_smtp_msg_text (NULL);
@@ -686,7 +617,6 @@ smtp_init (void)
 	smtp_mime_content_type_init (eng);
 	smtp_mime_disposition_init (eng);
 
-	//wyong, 20231022 
 	smtp_mime_body_init (eng);
 #else
 	smtp_cmd_helo_init ();
@@ -711,7 +641,6 @@ smtp_init (void)
 	smtp_mime_content_type_init ();
 	smtp_mime_disposition_init ();
 
-	//wyong, 20231022 
 	smtp_mime_body_init ();
 
 #endif
@@ -726,13 +655,13 @@ smtp_init (void)
 
 	create_mem_pool (&smtp_table_pool, sizeof (struct smtp_info),
 			 SMTP_INFO_STACK_DEPTH);
+
 	//create_mem_pool (&smtp_msg_text_pool, sizeof (struct smtp_msg_text), SMTP_MEM_STACK_DEPTH);
 	//create_mem_pool (&smtp_stream_buf_pool, SMTP_CONTENT_BUF_LEN * sizeof(unsigned char), SMTP_MEM_STACK_DEPTH);
 	//create_mem_pool (&smtp_boundary_pool, SMTP_BOUNDARY_BUF_LEN * sizeof(char), 512);
 
 	create_mem_pool (&smtp_ack_pool, sizeof (struct smtp_ack),
 			 SMTP_MEM_STACK_DEPTH);
-
 
 	return 0;
 }

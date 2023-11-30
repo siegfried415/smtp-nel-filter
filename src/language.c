@@ -1,17 +1,8 @@
-
-
-/*
- * $Id: language.c,v 1.3 2005/11/29 06:29:26 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "language.h"
@@ -33,7 +24,7 @@ smtp_mime_language_new (clist * lg_list)
 	lang = malloc (sizeof (*lang));
 	if (lang == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_mime_language_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_mime_language_new: MALLOC pointer=%p\n",
 		    lang);
 
 	lang->lg_list = lg_list;
@@ -47,7 +38,7 @@ smtp_mime_language_free (struct smtp_mime_language *lang)
 	clist_foreach (lang->lg_list, (clist_func) smtp_atom_free, NULL);
 	clist_free (lang->lg_list);
 	free (lang);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_mime_language_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_mime_language_free: FREE pointer=%p\n",
 		    lang);
 }
 

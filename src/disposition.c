@@ -1,18 +1,9 @@
-
-
-/*
- * $Id: disposition.c,v 1.16 2005/12/20 08:30:43 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
 #include "mem_pool.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "disposition.h"
@@ -27,6 +18,7 @@ extern struct nel_eng *eng;
 #ifndef TRUE
 #define TRUE 1
 #endif
+
 #ifndef FALSE
 #define FALSE 0
 #endif
@@ -133,7 +125,6 @@ smtp_mime_disposition_parm_free (struct smtp_mime_disposition_parm *dsp_parm)
 		break;
 	}
 
-	//free(dsp_parm);
 	free_mem (&smtp_mime_dsp_parm_pool, dsp_parm);
 	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_disposition_parm_free: pointer=%p, elm=%p\n",
@@ -152,7 +143,6 @@ smtp_mime_disposition_parm_new (int pa_type,
 {
 	struct smtp_mime_disposition_parm *dsp_parm;
 
-	//dsp_parm = malloc(sizeof(* dsp_parm));
 	dsp_parm =
 		(struct smtp_mime_disposition_parm *)
 		alloc_mem (&smtp_mime_dsp_parm_pool);
@@ -193,11 +183,10 @@ smtp_mime_disposition_type_free (struct smtp_mime_disposition_type *dsp_type)
 {
 	if (dsp_type->dsp_extension != NULL) {
 		free (dsp_type->dsp_extension);
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "smtp_mime_disposition_type_free: FREE pointer=%p\n",
 			    dsp_type->dsp_extension);
 	}
-	//free(dsp_type);
 	free_mem (&smtp_mime_dsp_type_pool, dsp_type);
 	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_disposition_type_free: pointer=%p, elm=%p\n",
@@ -210,7 +199,6 @@ smtp_mime_disposition_type_new (int dsp_type, char *dsp_extension)
 {
 	struct smtp_mime_disposition_type *m_dsp_type;
 
-	//m_dsp_type = malloc(sizeof(* m_dsp_type));
 	m_dsp_type =
 		(struct smtp_mime_disposition_type *)
 		alloc_mem (&smtp_mime_dsp_type_pool);
@@ -235,7 +223,6 @@ smtp_mime_disposition_free (struct smtp_mime_disposition *dsp)
 	clist_foreach (dsp->dsp_parms,
 		       (clist_func) smtp_mime_disposition_parm_free, NULL);
 	clist_free (dsp->dsp_parms);
-	//free(dsp);
 	free_mem (&smtp_mime_disposition_pool, dsp);
 	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_disposition_free: pointer=%p, elm=%p\n",
@@ -249,7 +236,6 @@ smtp_mime_disposition_new (struct smtp_mime_disposition_type *dsp_type,
 {
 	struct smtp_mime_disposition *dsp;
 
-	//dsp = malloc(sizeof(* dsp));
 	dsp = (struct smtp_mime_disposition *)
 		alloc_mem (&smtp_mime_disposition_pool);
 	if (dsp == NULL)
@@ -258,10 +244,7 @@ smtp_mime_disposition_new (struct smtp_mime_disposition_type *dsp_type,
 		    "smtp_mime_disposition_new: pointer=%p, elm=%p\n",
 		    &smtp_mime_disposition_pool, dsp);
 
-
 #ifdef USE_NEL
-	//xiayu 2005.11.28
-	//dsp->count = 0;
 	NEL_REF_INIT (dsp);
 #endif
 
@@ -903,7 +886,7 @@ smtp_mime_disposition_type_parse (const char *message, size_t length,
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	if (extension != NULL) {
 		free (extension);
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "smtp_mime_disposition_type_parse: FREE pointer=%p\n",
 			    extension);
 	}
@@ -919,9 +902,9 @@ smtp_mime_disposition_type_parse (const char *message, size_t length,
  *
  */
 int
-smtp_mime_disposition_parse ( /* struct neti_tcp_stream *ptcp, */ struct
-			     smtp_info *psmtp,
-			     const char *message, size_t length,
+smtp_mime_disposition_parse ( struct smtp_info *psmtp,
+			     const char *message, 
+				size_t length,
 			     size_t * index,
 			     struct smtp_mime_disposition **result)
 {
@@ -1006,7 +989,7 @@ smtp_mime_disposition_parse ( /* struct neti_tcp_stream *ptcp, */ struct
 	if ((r = nel_env_analysis (eng, &(psmtp->env), dsp_id,
 				   (struct smtp_simple_event *) dsp)) < 0) {
 		DEBUG_SMTP (SMTP_DBG,
-			    "smtp_from_parse: nel_env_analysis error\n");
+			    "smtp_mime_disposition_parse: nel_env_analysis error\n");
 		res = SMTP_ERROR_ENGINE;
 		smtp_mime_disposition_free (dsp);
 		goto err;
@@ -1014,11 +997,6 @@ smtp_mime_disposition_parse ( /* struct neti_tcp_stream *ptcp, */ struct
 #endif
 
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//fprintf(stderr, "found a deny event\n");
-
-		/* uncommented by wyong, 2005.11.8 */
-		//smtp_close_connection(psmtp); 
-
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
@@ -1026,8 +1004,6 @@ smtp_mime_disposition_parse ( /* struct neti_tcp_stream *ptcp, */ struct
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
 		fprintf (stderr,
 			 "found a drop event, no drop for message, denied.\n");
-		/* uncommented by wyong, 2005.11.8 */
-		//smtp_close_connection(psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -1047,8 +1023,6 @@ smtp_mime_disposition_parse ( /* struct neti_tcp_stream *ptcp, */ struct
 	smtp_mime_disposition_type_free (dsp_type);
 
       err:
-	// * result = dsp;
-	// *index = cur_token;
 	return res;
 
 }

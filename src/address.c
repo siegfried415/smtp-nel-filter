@@ -1,10 +1,3 @@
-/*
- * $Id: address.c,v 1.14 2005/12/07 09:44:30 wyong Exp $
- * RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
- * RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
-//#include <sys_defs.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,10 +5,7 @@
 #include "smtp.h"
 #include "address.h"
 #include "mime.h"
-
 #include "mem_pool.h"
-//#include "mmapstring.h"
-//#include "headers.h"
 
 extern ObjPool_t smtp_mailbox_addr_pool;
 
@@ -28,7 +18,7 @@ smtp_address_new (int ad_type, struct smtp_mailbox *ad_mailbox,
 	address = malloc (sizeof (*address));
 	if (address == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_address_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_address_new: MALLOC pointer=%p\n",
 		    address);
 
 	address->ad_type = ad_type;
@@ -57,7 +47,7 @@ smtp_address_free (struct smtp_address *address)
 		smtp_group_free (address->ad_data.ad_group);
 	}
 	free (address);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_address_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_address_free: FREE pointer=%p\n",
 		    address);
 }
 
@@ -70,7 +60,7 @@ smtp_mailbox_new (char *mb_display_name, char *mb_addr_spec)
 	mb = malloc (sizeof (*mb));
 	if (mb == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_mailbox_new: MALLOC pointer=%p\n", mb);
+	DEBUG_SMTP (SMTP_MEM, "smtp_mailbox_new: MALLOC pointer=%p\n", mb);
 
 	mb->mb_display_name = mb_display_name;
 	mb->mb_addr_spec = mb_addr_spec;
@@ -83,16 +73,16 @@ void
 smtp_mailbox_free (struct smtp_mailbox *mailbox)
 {
 	if (mailbox->mb_display_name != NULL) {
-		DEBUG_SMTP (SMTP_MEM_1, "BEFORE smtp_display_name_free\n");
+		DEBUG_SMTP (SMTP_MEM, "BEFORE smtp_display_name_free\n");
 		smtp_display_name_free (mailbox->mb_display_name);
 	}
 
-	//xiayu 2005.11.29 added the if condication
-	if (mailbox->mb_addr_spec != NULL);
-	smtp_addr_spec_free (mailbox->mb_addr_spec);
+	if (mailbox->mb_addr_spec != NULL) {
+		smtp_addr_spec_free (mailbox->mb_addr_spec);
+	}
 
 	free (mailbox);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_mailbox_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_mailbox_free: FREE pointer=%p\n",
 		    mailbox);
 }
 
@@ -100,7 +90,7 @@ void
 smtp_angle_addr_free (char *angle_addr)
 {
 	free (angle_addr);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_angle_addr_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_angle_addr_free: FREE pointer=%p\n",
 		    angle_addr);
 }
 
@@ -113,7 +103,7 @@ smtp_group_new (char *grp_display_name, struct smtp_mailbox_list *grp_mb_list)
 	group = malloc (sizeof (*group));
 	if (group == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_group_new: MALLOC pointer=%p\n", group);
+	DEBUG_SMTP (SMTP_MEM, "smtp_group_new: MALLOC pointer=%p\n", group);
 
 	group->grp_display_name = grp_display_name;
 	group->grp_mb_list = grp_mb_list;
@@ -127,16 +117,16 @@ smtp_group_free (struct smtp_group *group)
 {
 	if (group->grp_mb_list)
 		smtp_mailbox_list_free (group->grp_mb_list);
-	DEBUG_SMTP (SMTP_MEM_1, "BEFORE smtp_display_name_free\n");
+	DEBUG_SMTP (SMTP_MEM, "BEFORE smtp_display_name_free\n");
 	smtp_display_name_free (group->grp_display_name);
 	free (group);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_group_free: FREE pointer=%p\n", group);
+	DEBUG_SMTP (SMTP_MEM, "smtp_group_free: FREE pointer=%p\n", group);
 }
 
 void
 smtp_display_name_free (char *display_name)
 {
-	DEBUG_SMTP (SMTP_MEM_1, "BEFORE smtp_phrase_free\n");
+	DEBUG_SMTP (SMTP_MEM, "BEFORE smtp_phrase_free\n");
 	smtp_phrase_free (display_name);
 }
 
@@ -149,7 +139,7 @@ smtp_mailbox_list_new (clist * mb_list)
 	mbl = malloc (sizeof (*mbl));
 	if (mbl == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_mailbox_list_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_mailbox_list_new: MALLOC pointer=%p\n",
 		    mbl);
 
 	mbl->mb_list = mb_list;
@@ -165,7 +155,7 @@ smtp_mailbox_list_free (struct smtp_mailbox_list *mb_list)
 		       NULL);
 	clist_free (mb_list->mb_list);
 	free (mb_list);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_mailbox_list_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_mailbox_list_free: FREE pointer=%p\n",
 		    mb_list);
 }
 
@@ -179,7 +169,7 @@ smtp_address_list_new (clist * ad_list)
 	addr_list = malloc (sizeof (*addr_list));
 	if (addr_list == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_address_list_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_address_list_new: MALLOC pointer=%p\n",
 		    addr_list);
 
 	addr_list->ad_list = ad_list;
@@ -197,7 +187,7 @@ smtp_address_list_free (struct smtp_address_list *addr_list)
 		       NULL);
 	clist_free (addr_list->ad_list);
 	free (addr_list);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_address_list_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_address_list_free: FREE pointer=%p\n",
 		    addr_list);
 }
 
@@ -206,7 +196,7 @@ void
 smtp_addr_spec_free (char *addr_spec)
 {
 	free (addr_spec);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_add_spec_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_add_spec_free: FREE pointer=%p\n",
 		    addr_spec);
 }
 
@@ -214,7 +204,7 @@ void
 smtp_local_part_free (char *local_part)
 {
 	free (local_part);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_local_part_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_local_part_free: FREE pointer=%p\n",
 		    local_part);
 }
 
@@ -222,7 +212,7 @@ void
 smtp_domain_free (char *domain)
 {
 	free (domain);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_domain_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_domain_free: FREE pointer=%p\n",
 		    domain);
 }
 
@@ -230,7 +220,7 @@ void
 smtp_domain_literal_free (char *domain_literal)
 {
 	free (domain_literal);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_domain_literal_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_domain_literal_free: FREE pointer=%p\n",
 		    domain_literal);
 }
 
@@ -480,7 +470,7 @@ smtp_address_parse (const char *message, size_t length,
 		goto free;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "address = %s\n", address);
+	DEBUG_SMTP (SMTP_DBG, "address = %p\n", address);
 	*result = address;
 	*index = cur_token;
 
@@ -541,7 +531,7 @@ smtp_mailbox_parse (const char *message, size_t length,
 
       free:
 	if (display_name != NULL) {
-		DEBUG_SMTP (SMTP_MEM_1, "BEFORE smtp_display_name_free\n");
+		DEBUG_SMTP (SMTP_MEM, "BEFORE smtp_display_name_free\n");
 		smtp_display_name_free (display_name);
 	}
 	if (addr_spec != NULL)
@@ -591,7 +581,7 @@ smtp_name_addr_parse (const char *message, size_t length,
 
       free_display_name:
 	if (display_name != NULL) {
-		DEBUG_SMTP (SMTP_MEM_1, "BEFORE smtp_display_name_free\n");
+		DEBUG_SMTP (SMTP_MEM, "BEFORE smtp_display_name_free\n");
 		smtp_display_name_free (display_name);
 	}
       err:
@@ -627,7 +617,7 @@ smtp_angle_addr_parse (const char *message, size_t length,
 	r = smtp_greater_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		free (addr_spec);
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "smtp_angle_addr_parse: FREE pointer=%p\n",
 			    addr_spec);
 		return r;
@@ -706,7 +696,7 @@ smtp_group_parse (const char *message, size_t length,
       free_mailbox_list:
 	smtp_mailbox_list_free (mailbox_list);
       free_display_name:
-	DEBUG_SMTP (SMTP_MEM_1, "BEFORE smtp_display_name_free\n");
+	DEBUG_SMTP (SMTP_MEM, "BEFORE smtp_display_name_free\n");
 	smtp_display_name_free (display_name);
       err:
 	return res;
@@ -824,10 +814,6 @@ smtp_addr_spec_parse (const char *message, size_t length,
 		      size_t * index, char **result)
 {
 	size_t cur_token;
-#if 0
-	char *local_part;
-	char *domain;
-#endif
 	char *addr_spec;
 	int r;
 	int res;
@@ -851,7 +837,7 @@ smtp_addr_spec_parse (const char *message, size_t length,
 		goto err;
 	}
 
-	//xiayu 2005.11.20  mail without recipients
+	//mail without recipients
 	if (memcmp (message + cur_token,
 		    "<Undisclosed-Recipient:;>",
 		    strlen ("<Undisclosed-Recipient:;>")) == 0) {
@@ -901,7 +887,7 @@ smtp_addr_spec_parse (const char *message, size_t length,
 		res = SMTP_ERROR_MEMORY;
 		goto err;
 	}
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_addr_spec_parse: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_addr_spec_parse: MALLOC pointer=%p\n",
 		    addr_spec);
 
 	count = end - cur_token;
@@ -960,7 +946,7 @@ smtp_addr_spec_parse (const char *message, size_t length,
 			res = SMTP_ERROR_MEMORY;
 			goto free_domain;
 		}
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "smtp_addr_spec_parse: MALLOC pointer=%p\n",
 			    addr_spec);
 
@@ -1120,7 +1106,7 @@ smtp_domain_literal_parse (const char *message, size_t length,
 	domain_literal = malloc (len + 1);
 	if (domain_literal == NULL)
 		return SMTP_ERROR_MEMORY;
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_domain_literal_parse: MALLOC pointer=%p\n",
 		    domain_literal);
 
@@ -1143,13 +1129,13 @@ relay_mailbox (char *mailbox)
 	return ( /*(*mailbox == '@') && */ (strchr (mailbox, ':') != 0));
 }
 
+#if 0
 int
 match_in_adlist (struct smtp_address_list *addr_list, const char *pattern)
 {
-	/*NOTE,NOTE,NOTE, wyong, 2005.11.5  */
 	return 0;
 }
-
+#endif 
 
 void
 dump_ip_addr (unsigned int sip, unsigned int dip, unsigned int spt,
@@ -1219,7 +1205,7 @@ smtp_wsp_addr_spec_parse (const char *message, size_t length,
 		res = SMTP_ERROR_MEMORY;
 		goto err;
 	}
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_wsp_addr_spec_parse: MALLOC pointer=%p\n",
 		    addr_spec);
 
@@ -1278,7 +1264,7 @@ smtp_wsp_angle_addr_parse (const char *message, size_t length,
 	if (r != SMTP_NO_ERROR) {
 		DEBUG_SMTP (SMTP_DBG, "\n");
 		free (addr_spec);
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "smtp_wsp_angle_addr_parse: FREE pointer=%p\n",
 			    addr_spec);
 		return r;
@@ -1319,7 +1305,6 @@ smtp_wsp_name_addr_parse (const char *message, size_t length,
 					 &display_name);
 	if ((r != SMTP_NO_ERROR) && (r != SMTP_ERROR_PARSE)) {
 		DEBUG_SMTP (SMTP_DBG, "\n");
-		//xiayu 2005.11.29
 		display_name = NULL;
 		res = r;
 		goto err;
@@ -1342,7 +1327,7 @@ smtp_wsp_name_addr_parse (const char *message, size_t length,
 
 free_display_name:
 	if (display_name != NULL) {
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "BEFORE 635 smtp_display_name_free\n");
 		smtp_display_name_free (display_name);
 	}
@@ -1392,7 +1377,7 @@ smtp_wsp_mailbox_parse (const char *message, size_t length,
 
 free:
 	if (display_name != NULL) {
-		DEBUG_SMTP (SMTP_MEM_1,
+		DEBUG_SMTP (SMTP_MEM,
 			    "BEFORE 683 smtp_display_name_free\n");
 		smtp_display_name_free (display_name);
 	}

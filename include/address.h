@@ -308,4 +308,23 @@ group           =       display-name ":" [mailbox-list / CFWS] ";"
 int smtp_group_parse (const char *message, size_t length,
 		      size_t * index, struct smtp_group **result);
 
+//
+int smtp_wsp_display_name_parse (const char *message, size_t length,
+                             size_t * index, char **result);
+
+//
+int smtp_wsp_name_addr_parse (const char *message, size_t length,
+                          size_t * index,
+                          char **pdisplay_name, char **pangle_addr);
+
+
+void smtp_mailbox_addr_free (char *addr);
+
+char *mailbox_addr_dup (char *addr_spec);
+
+int
+smtp_wsp_mailbox_list_parse (const char *message, size_t length,
+                             size_t * index,
+                             struct smtp_mailbox_list **result);
+
 #endif

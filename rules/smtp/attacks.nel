@@ -1,35 +1,30 @@
 
-#include "CMDS/EHLO/ehlo_long.nel"
+//#include "CMDS/EHLO/ehlo_long.nel"
 
 // those three rules demostrate c-nel interface 
-#include "CMDS/EHLO/ehlo_nel_match.nel"	
+//#include "CMDS/EHLO/ehlo_nel_match.nel"	
 //#include "CMDS/EHLO/ehlo_c_match.nel"
 //#include "CMDS/EHLO/ehlo_my_match.nel"
 
 // demostrate stateful rule create by variable
-#include "CMDS/MAIL/mail_invalid_size.nel" 
-
-
-#include "CMDS/MAIL/mail_ip_addr.nel"
+//#include "CMDS/MAIL/mail_invalid_size.nel" 
 
 // vrfy_shellcode and cmail_overflow.nel demostrate n-level rules
-#include "CMDS/VRFY/vrfy_shellcode.nel"	
+//#include "CMDS/VRFY/vrfy_shellcode.nel"	
 //#include "CMDS/VRFY/cmail_overflow.nel"
 
 
-// user extenable $0 
-//#include "CMDS/VRFY/vrfy_toomuch.nel"	
-
 // block vrfy command by set c variable 
-#include "CMDS/EXPN/expn_block.nel"	
+//#include "CMDS/VRFY/vrfy_block.nel" 
 
 
 // cisco_evasion demostrate stateful nel 
-#include "CMDS/DATA/data_bef_rcpt.nel"	
+//#include "CMDS/DATA/data_bef_rcpt.nel"	
+//#include "CMDS/DATA/cisco_evasion.nel"
 
-
-#include "MESG/HDR/Content-Disposition/content_disposition_42zip.nel"
+//#include "MESG/HDR/Content-Disposition/content_disposition_42zip.nel"
 
 //text_match demostrate stream pattern match
-#include "MESG/TEXT/text_match.nel"	
+//#include "MESG/TEXT/text_match.nel"	
+
 

@@ -7,7 +7,7 @@
 */
 struct smtp_bcc
 {
-	struct smtp_address_list *bcc_addr_list;	/* can be NULL */
+	struct smtp_address_list *bcc_addr_list;
 };
 
 struct smtp_bcc *smtp_bcc_new (struct smtp_address_list *bcc_addr_list);

@@ -1,16 +1,8 @@
-
-/*
- * $Id: encoding.c,v 1.5 2005/11/24 02:49:22 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "encoding.h"
@@ -156,14 +148,6 @@ smtp_mime_mechanism_parse (struct smtp_part *part, const char *message,
 		goto err;
 	}
 
-	//xiayu 2005.10.28
-	//mechanism = smtp_mime_mechanism_new(type, token);
-	//if (mechanism == NULL) {
-	//  res = SMTP_ERROR_MEMORY;
-	//  goto free;
-	//}
-
-	//xiayu 2005.10.28
 	r = smtp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
@@ -171,18 +155,11 @@ smtp_mime_mechanism_parse (struct smtp_part *part, const char *message,
 	}
 
 	part->encode_type = type;
-
-	//xiayu 2005.10.28
-	// * result = mechanism;
 	*result = type;
 	*index = cur_token;
 
 	return SMTP_NO_ERROR;
 
-//xiayu 2005.10.28
-// free:
-//  if (token != NULL)
-//    smtp_mime_token_free(token);
       err:
 	return res;
 }
@@ -195,7 +172,8 @@ x  encoding := "Content-Transfer-Encoding" ":" mechanism
 int
 smtp_mime_encoding_parse (struct smtp_part *part, const char *message,
 			  size_t length, size_t * index,
-			  struct smtp_mime_mechanism **result)
+			  int *result 
+			)
 {
 	return smtp_mime_mechanism_parse (part, message, length, index,
 					  result);

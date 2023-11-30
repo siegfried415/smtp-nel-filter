@@ -1,11 +1,6 @@
-/*
- * password.re
- * $Id: password.re,v 1.16 2005/12/20 08:30:43 xiay Exp $
- */
-
 #include "mem_pool.h"
-
 #include "smtp.h"
+#include "mime.h"
 #include "command.h"
 #include "password.h"
 
@@ -17,7 +12,7 @@ int pass_id;
 extern int ack_id;
 #endif
 
-extern max_smtp_ack_len;
+extern int max_smtp_ack_len;
 int var_disable_passwd_cmd;
 ObjPool_t smtp_cmd_passwd_pool;
 
@@ -32,9 +27,6 @@ smtp_cmd_passwd_init (
 	create_mem_pool (&smtp_cmd_passwd_pool,
 			 sizeof (struct smtp_cmd_passwd),
 			 SMTP_MEM_STACK_DEPTH);
-#ifdef USE_NEL
-	//nel_func_name_call(eng, (char *)&pass_id, "nel_id_of", "pass_req");
-#endif
 }
 
 
@@ -56,8 +48,7 @@ space	= [\040];
 
 
 int
-smtp_ack_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		       *psmtp)
+smtp_ack_passwd_parse (struct smtp_info *psmtp)
 {
 	struct smtp_ack *ack;
 	int r, res;
@@ -81,7 +72,6 @@ smtp_ack_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_passwd_parse: 334\n");
 		code = 334;
 		cur_token = 3;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -90,7 +80,6 @@ smtp_ack_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_passwd_parse: 235\n");
 		code = 235;
 		cur_token = 3;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -101,7 +90,6 @@ smtp_ack_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_passwd_parse: %d\n", code);
 
 		psmtp->last_cli_event_type = SMTP_EVENT_UNCERTAIN;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -115,7 +103,6 @@ smtp_ack_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 			psmtp->last_cli_event_type = SMTP_EVENT_UNCERTAIN;
 		}
 
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -170,9 +157,7 @@ smtp_ack_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	}
 
 
-	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %d\n", len, cur_token);
-	//psmtp->svr_data += len;
-	//psmtp->svr_data_len = 0;
+	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %lu\n", len, cur_token);
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -212,11 +197,8 @@ smtp_cmd_passwd_new (int len, char *pass)
 	}
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_passwd_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_passwd_pool, (void *) passwd);
-	//passwd->event_type = SMTP_CMD_PASSWD;
-	//passwd->nel_id = pass_id;
 
 #ifdef USE_NEL
-	//passwd->count = 0;
 	NEL_REF_INIT (passwd);
 #endif
 
@@ -233,8 +215,7 @@ smtp_cmd_passwd_new (int len, char *pass)
 
 
 int
-smtp_cmd_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		       *psmtp, char *message, size_t length, size_t * index)
+smtp_cmd_passwd_parse ( struct smtp_info *psmtp, char *message, size_t length, size_t * index)
 {
 	struct smtp_cmd_passwd *passwd = NULL;
 	char *pass, *crlf;
@@ -242,29 +223,14 @@ smtp_cmd_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	int r, res;
 
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_passwd_parse\n");
-
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	DEBUG_SMTP (SMTP_DBG, "message = %s\n", message);
-	//if (length > max_passwd_lengh) {
-	//}
-#endif
-
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	DEBUG_SMTP (SMTP_DBG, "message = %s\n", message);
 	crlf = strstr (message, "\r\n");
 	if (crlf == NULL) {
-		//r = reply_to_client(ptcp, "501 AUTH Error: password line no CRLF\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_PARSE;
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	if (crlf > message) {
-		DEBUG_SMTP (SMTP_DBG, "\n");
 		pass = smtp_string_new (message, crlf - message);
 		if (pass == NULL) {
 			res = SMTP_ERROR_MEMORY;
@@ -272,11 +238,9 @@ smtp_cmd_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		}
 	}
 	else {
-		DEBUG_SMTP (SMTP_DBG, "\n");
 		pass = NULL;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	passwd = smtp_cmd_passwd_new (length, pass);
 	if (passwd == NULL) {
 		DEBUG_SMTP (SMTP_DBG,
@@ -292,8 +256,7 @@ smtp_cmd_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 #ifdef USE_NEL
 	if ((r = nel_env_analysis (eng, &(psmtp->env), pass_id,
-				   (struct smtp_simple_event *) passwd)) <
-	    0) {
+			(struct smtp_simple_event *) passwd)) < 0) {
 		DEBUG_SMTP (SMTP_DBG,
 			    "smtp_cmd_passwd_parse: nel_env_analysis error\n");
 		res = SMTP_ERROR_ENGINE;
@@ -302,29 +265,16 @@ smtp_cmd_passwd_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 #endif
 
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//fprintf(stderr, "found a deny event\n");
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 AUTH Error: password cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
 
 	psmtp->last_cli_event_type = SMTP_CMD_PASSWD;
-
-	//wyong, 20231003
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
-	//r = write_to_server(ptcp, psmtp);
-
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;

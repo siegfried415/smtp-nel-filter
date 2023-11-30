@@ -1,18 +1,10 @@
 
-
-/*
- * $Id: path.c,v 1.3 2005/11/29 06:29:26 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mem_pool.h"
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "path.h"
@@ -28,7 +20,7 @@ smtp_path_new (char *pt_addr_spec)
 	path = malloc (sizeof (*path));
 	if (path == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_path_new: MALLOC pointer=%p\n", path);
+	DEBUG_SMTP (SMTP_MEM, "smtp_path_new: MALLOC pointer=%p\n", path);
 
 	path->pt_addr_spec = pt_addr_spec;
 
@@ -42,7 +34,7 @@ smtp_path_free (struct smtp_path *path)
 	if (path->pt_addr_spec != NULL)
 		smtp_addr_spec_free (path->pt_addr_spec);
 	free (path);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_path_free: FREE pointer=%p\n", path);
+	DEBUG_SMTP (SMTP_MEM, "smtp_path_free: FREE pointer=%p\n", path);
 }
 
 /*
@@ -166,7 +158,7 @@ smtp_adl_path_parse (char *message, size_t length, size_t * index,
 			    message + cur_token);
 		if ((colon = strchr (message + cur_token, ':')) != 0) {
 			DEBUG_SMTP (SMTP_DBG,
-				    "smtp_adl_path_parse: cur_token = %d\n",
+				    "smtp_adl_path_parse: cur_token = %lu\n",
 				    cur_token);
 			cur_token = colon - message + 1;
 			DEBUG_SMTP (SMTP_DBG,
@@ -184,7 +176,7 @@ smtp_adl_path_parse (char *message, size_t length, size_t * index,
 
 	DEBUG_SMTP (SMTP_DBG, "message + cur_token: %s\n",
 		    message + cur_token);
-	DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+	DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 	r = smtp_wsp_mailbox_list_parse (message, length, &cur_token,
 					 &mb_list);
 	if (r != SMTP_NO_ERROR) {
@@ -205,9 +197,9 @@ smtp_adl_path_parse (char *message, size_t length, size_t * index,
 	}
 
 	DEBUG_SMTP (SMTP_DBG, "message+cur_token: %s\n", message + cur_token);
-	DEBUG_SMTP (SMTP_DBG, "cur_token = %d length = %d\n", cur_token,
+	DEBUG_SMTP (SMTP_DBG, "cur_token = %lu length = %lu\n", cur_token,
 		    length);
-	/* fixme: xiayu 2005.10.19
+	/* 
 	 *  should be more flexible
 	 *    strict_rfc822
 	 *    allow_empty_addr
@@ -252,10 +244,6 @@ smtp_adl_path_parse (char *message, size_t length, size_t * index,
 	return SMTP_NO_ERROR;
 
       err:
-	//wyong, 20231020 
-	//DEBUG_SMTP(SMTP_DBG, "reset cli buf\n");
-	//reset_client_buf(psmtp, index);
-
 	DEBUG_SMTP (SMTP_DBG, "free mb_list\n");
 	if (mb_list)
 		smtp_mailbox_list_free (mb_list);

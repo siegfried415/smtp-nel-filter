@@ -1,15 +1,8 @@
-
-/*
- * main.c
- * $Id: main.c,v 1.1.1.1 2005/02/19 12:57:06 wyong Exp $
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <getopt.h>
-
 #include <syslog.h>
 #include <pcap.h>
 #include <errno.h>
@@ -43,8 +36,6 @@ char *device;
 struct option long_options[] = {
 	{"read_from", required_argument, 0, 'r'},
 #ifdef USE_NEL
-	{"compile_level", required_argument, 0, 'c'},
-	{"optimize_level", required_argument, 0, 'o'},
 	{"verbose_level", required_argument, 0, 'v'},
 	{"debug_level", required_argument, 0, 'd'},
 #endif
@@ -61,8 +52,6 @@ usage (char *prog)
 {
 #ifdef USE_NEL
 	fprintf (stdout, "%s [options] nelfile\n", prog);
-	fprintf (stdout, "\t-c compile-level: set compile level \n");
-	fprintf (stdout, "\t-o optimize-level: set optimize level \n");
 	fprintf (stdout, "\t-v verbose-level: set verbose level \n");
 	fprintf (stdout, "\t-d debug-level: set debug level \n");
 #else
@@ -81,8 +70,7 @@ usage (char *prog)
 void
 version (void)
 {
-	fprintf (stdout, "%s %s %d.%d.%d\n", "NEU SOFT", "NetEye Engine", 1,
-		 0, 0);
+	fprintf (stdout, "%s %d.%d.%d\n", "smtp-nel-filter", 1, 0, 0);
 }
 
 int
@@ -100,7 +88,7 @@ main (int argc, char **argv)
 
 	while ((c = getopt_long (argc, argv,
 #ifdef USE_NEL
-				 "r:c:o:v:d:i:f:hV",
+				 "r:v:d:i:f:hV",
 #else
 				 "r:i:f:hV",
 #endif
@@ -108,14 +96,6 @@ main (int argc, char **argv)
 
 		switch (c) {
 #ifdef USE_NEL
-		case 'c':
-			compile_level = atoi (optarg);
-			eng->compile_level = compile_level;
-			break;
-		case 'o':
-			optimize_level = atoi (optarg);
-			eng->optimize_level = optimize_level;
-			break;
 		case 'v':
 			verbose_level = atoi (optarg);
 			eng->verbose_level = verbose_level;
@@ -166,19 +146,9 @@ main (int argc, char **argv)
 		exit (1);
 	}
 
-#define PRODUCTINFO     "\
-	  ___________________________________________________________ \n\
-	 |                                                           |\n\
-	 |     smtp-nel-filter (Ver 1.0)                             |\n\
-	 |                                                           |\n\
-	 |     Copyright (C) NEU Co., Ltd. 2004-2009  		     |\n\
-	 |                 All Rights Reserved.                      |\n\
-	 |___________________________________________________________|"
-	fprintf (stderr, "\n%s\n\nSystem is initializing...\n\n",
-		 PRODUCTINFO);
+	fprintf (stderr, "smtp-nel-filter is initializing...\n" );
 	sleep (1);
 
-	//wyong, 20231015 
 	nids_params.pcap_filter = filter_string;
 	if (tcpdump_filename) {
 		nids_params.filename = tcpdump_filename;
@@ -204,22 +174,18 @@ main (int argc, char **argv)
 	}
 #endif
 
-	//wyong, 20230912 
 	if (smtp_init () < 0) {
 		printf ("\nSmtp Engine init failed!\n");
 		goto shutdown;
 	}
 
-	//wyong, 20231015 
 	nids_run ();
 
-	//cleanup(EXIT_OK, "System normally exit!");
-	//wyong, 20230912
 	smtp_cleanup ();
 
       shutdown:
 #ifdef USE_NEL
-	//nel_eng_dealloc(&eng);
+	nel_eng_dealloc(eng);
 #endif
 
 	return ret;

@@ -26,9 +26,9 @@ struct smtp_cmd_auth
 
 void smtp_cmd_auth_init (
 #ifdef USE_NEL
-				struct nel_eng *eng
+		struct nel_eng *eng
 #endif
-	);
+);
 
 struct smtp_cmd_auth *smtp_cmd_auth_new (int len, int mech);
 

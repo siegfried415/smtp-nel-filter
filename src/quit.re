@@ -1,12 +1,7 @@
-/*
- * quit.c
- * $Id: quit.re,v 1.16 2005/12/20 08:30:43 xiay Exp $
- */
-
 
 #include "mem_pool.h"
-
 #include "smtp.h"
+#include "mime.h"
 #include "quit.h"
 #include "command.h"
 
@@ -78,7 +73,6 @@ smtp_ack_quit_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 221\n");
 		code = 221;
 		cur_token = 3;
-		//goto ack_new;
 		goto crlf;
 	}
 	digit{3,3}
@@ -99,13 +93,12 @@ smtp_ack_quit_parse (struct smtp_info *psmtp)
 	/* *INDENT-ON* */
 
       crlf:
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	r = smtp_str_crlf_parse (buf, len, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = SMTP_ERROR_PARSE;
 		goto err;
 	}
-	DEBUG_SMTP (SMTP_DBG, "length = %d, cur_token = %d\n", len,
+	DEBUG_SMTP (SMTP_DBG, "length = %d, cur_token = %lu\n", len,
 		    cur_token);
 
       ack_new:
@@ -138,12 +131,9 @@ smtp_ack_quit_parse (struct smtp_info *psmtp)
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %d\n", len, cur_token);
+	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %lu\n", len, cur_token);
 	DEBUG_SMTP (SMTP_DBG, "data = %s,  data_len = %d\n", psmtp->svr_data,
 		    psmtp->svr_data_len);
-	//psmtp->svr_data += cur_token;
-	//psmtp->svr_data_len -= cur_token;
-	//DEBUG_SMTP(SMTP_DBG, "data-2 = %s\n", psmtp->svr_data -2);
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -181,11 +171,8 @@ smtp_cmd_quit_new (int len)
 	}
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_quit_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_quit_pool, (void *) quit);
-	//quit->event_type = SMTP_CMD_QUIT;
-	//quit->nel_id = quit_id;
 
 #ifdef USE_NEL
-	//quit->count = 0;
 	NEL_REF_INIT (quit);
 #endif
 	quit->len = len;
@@ -207,18 +194,9 @@ smtp_cmd_quit_parse (struct smtp_info *psmtp, char *message, size_t length,
 	r = smtp_wsp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 QUIT Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	quit = smtp_cmd_quit_new (length);
 	if (quit == NULL) {
 		DEBUG_SMTP (SMTP_DBG,
@@ -238,18 +216,11 @@ smtp_cmd_quit_parse (struct smtp_info *psmtp, char *message, size_t length,
 #endif
 
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//fprintf(stderr, "found a deny event\n");
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 QUIT cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -257,10 +228,6 @@ smtp_cmd_quit_parse (struct smtp_info *psmtp, char *message, size_t length,
 	*index = cur_token;
 	psmtp->last_cli_event_type = SMTP_CMD_QUIT;
 
-	//wyong, 20231003
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
-	//r = write_to_server(ptcp, psmtp);
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -279,26 +246,3 @@ smtp_cmd_quit_parse (struct smtp_info *psmtp, char *message, size_t length,
 
 }
 
-
-#if 0
-#define SMTP_STRING_SIZE 513
-
-int
-mailsmtp_quit (mailsmtp * session)
-{
-	char command[SMTP_STRING_SIZE];
-	int r;
-
-	snprintf (command, SMTP_STRING_SIZE, "QUIT\r\n");
-	r = send_command (session, command);
-	if (r == -1)
-		return MAILSMTP_ERROR_STREAM;
-	r = read_response (session);
-	if (r == 0)
-		return MAILSMTP_ERROR_STREAM;
-	mailstream_close (session->stream);
-	session->stream = NULL;
-
-	return MAILSMTP_NO_ERROR;
-}
-#endif

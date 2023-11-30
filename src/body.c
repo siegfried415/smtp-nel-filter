@@ -1,17 +1,8 @@
-
-
-/*
- * $Id: body.c,v 1.9 2005/12/06 01:00:31 wyong Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "body.h"
 #include "encoding.h"
@@ -29,7 +20,7 @@ smtp_mime_multipart_body_new (clist * bd_list)
 	mp_body = malloc (sizeof (*mp_body));
 	if (mp_body == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_multipart_body_new: MALLOC pointer=%p\n",
 		    mp_body);
 
@@ -44,12 +35,11 @@ smtp_mime_multipart_body_free (struct smtp_mime_multipart_body *mp_body)
 	clist_foreach (mp_body->bd_list, (clist_func) smtp_body_free, NULL);
 	clist_free (mp_body->bd_list);
 	free (mp_body);
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_multipart_body_free: FREE pointer=%p\n",
 		    mp_body);
 }
 
-#define SMTP_MEM_1 0
 struct smtp_body *
 smtp_body_new (const char *bd_text, size_t bd_size)
 {
@@ -58,7 +48,7 @@ smtp_body_new (const char *bd_text, size_t bd_size)
 	body = malloc (sizeof (*body));
 	if (body == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_body_new: pointer=%p\n", body);
+	DEBUG_SMTP (SMTP_MEM, "smtp_body_new: pointer=%p\n", body);
 
 	body->bd_text = bd_text;
 	body->bd_size = bd_size;
@@ -71,7 +61,7 @@ void
 smtp_body_free (struct smtp_body *body)
 {
 	free (body);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_body_free: pointer=%p\n", body);
+	DEBUG_SMTP (SMTP_MEM, "smtp_body_free: pointer=%p\n", body);
 }
 
 /*
@@ -141,27 +131,19 @@ smtp_mime_base64_body_parse (const char *message, size_t length,
 
 	char *buf = NULL;
 
-	DEBUG_SMTP (SMTP_DBG, "message = %s, index = %d,  length= %d \n",
+	DEBUG_SMTP (SMTP_DBG, "message = %s, index = %lu,  length= %lu \n",
 		    message, *index, length);
 	cur_token = *index;
 	chunk_index = 0;
 	written = 0;
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
-#if 0
-	mmapstr = mmap_string_sized_new ((length - cur_token) * 3 / 4);
-	if (mmapstr == NULL) {
-		res = SMTP_ERROR_MEMORY;
-		goto err;
-	}
-#else
 	buf = malloc ((length - cur_token) * 3 / 4 + 3);
 	if (buf == NULL) {
 		res = SMTP_ERROR_MEMORY;
 		goto err;
 
 	}
-#endif
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	i = 0;
@@ -196,18 +178,9 @@ smtp_mime_base64_body_parse (const char *message, size_t length,
 			chunk[3] = 0;
 
 			chunk_index = 0;
-
-#if 0
-			if (mmap_string_append_len (mmapstr, out, 3) == NULL) {
-				res = SMTP_ERROR_MEMORY;
-				goto free;
-			}
-			written += 3;
-#else
 			buf[written++] = out[0];
 			buf[written++] = out[1];
 			buf[written++] = out[2];
-#endif
 
 		}
 	}
@@ -225,56 +198,25 @@ smtp_mime_base64_body_parse (const char *message, size_t length,
 			len++;
 		}
 
-#if 0
-		if (mmap_string_append_len (mmapstr, out, len) == NULL) {
-			res = SMTP_ERROR_MEMORY;
-			goto free;
-		}
-		written += len;
-#else
 		for (i = 0; i < len; i++) {
 			buf[written++] = out[i];
 		}
-#endif
 
 	}
-
-#if 0				//xiayu 2005.11.28 uncommented no use for us
-	DEBUG_SMTP (SMTP_DBG, "\n");
-	r = mmap_string_ref (mmapstr);
-	if (r < 0) {
-		res = SMTP_ERROR_MEMORY;
-		goto free;
-	}
-#endif
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	*index = cur_token;
-#if 0
-	*result = mmapstr->str;
-#else
 	*result = buf;
-#endif
 	*result_len = written;
 
 
-#if 0
-	/* xiayu 2005.11.28 added should release the 'mmapstr', 
-	   but not the 'mmapstr->str' */
-	free (mmapstr);
-#endif
-
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_base64_body_parse: FREE pointer=%p\n",
 		    mmapstr);
 	return SMTP_NO_ERROR;
 
       free:
-#if 0
-	mmap_string_free (mmapstr);
-#else
 	free (buf);
-#endif
 
       err:
 	return res;
@@ -419,18 +361,6 @@ smtp_mime_quoted_printable_body_parse (const char *message, size_t length,
 						state = STATE_NORMAL;
 						break;
 					}
-
-#if 0
-					/* flush before writing additionnal information */
-					r = write_decoded_qp (mmapstr, start,
-							      count);
-					if (r != SMTP_NO_ERROR) {
-						res = r;
-						goto free;
-					}
-					written += count;
-					count = 0;
-#endif
 
 					ch = to_char (message + cur_token +
 						      1);
@@ -601,26 +531,14 @@ smtp_mime_quoted_printable_body_parse (const char *message, size_t length,
 		count = 0;
 	}
 
-#if 0				//xiayu 2005.11.28 uncommented no use for us
-	r = mmap_string_ref (mmapstr);
-	if (r < 0) {
-		res = SMTP_ERROR_MEMORY;
-		goto free;
-	}
-#endif
-
 	*index = cur_token;
 	*result = mmapstr->str;
 	*result_len = written;
 
-#if 1
-	/* xiayu 2005.11.28 added should release the 'mmapstr', 
-	   but not the 'mmapstr->str' */
 	free (mmapstr);
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_quoted_printable_body_parse: FREE pointer=%p\n",
 		    mmapstr);
-#endif
 
 	return SMTP_NO_ERROR;
 
@@ -651,7 +569,7 @@ smtp_mime_binary_body_parse (const char *message, size_t length,
 		}
 	}
 
-	DEBUG_SMTP (SMTP_MEM_1, "before mmap_string_new_len: len = %d\n",
+	DEBUG_SMTP (SMTP_MEM, "before mmap_string_new_len: len = %lu\n",
 		    length - cur_token);
 	mmapstr =
 		mmap_string_new_len (message + cur_token, length - cur_token);
@@ -660,27 +578,15 @@ smtp_mime_binary_body_parse (const char *message, size_t length,
 		goto err;
 	}
 
-#if 0				//xiayu 2005.11.28 uncommented no use for us
-	r = mmap_string_ref (mmapstr);
-	if (r < 0) {
-		res = SMTP_ERROR_MEMORY;
-		goto free;
-	}
-#endif
 
 	*index = length;
 	*result = mmapstr->str;
 	*result_len = length - cur_token;
 
-#if 1
-	/* xiayu 2005.11.28 added should release the 'mmapstr', 
-	   but not the 'mmapstr->str' */
 	free (mmapstr);
-	DEBUG_SMTP (SMTP_MEM_1,
+	DEBUG_SMTP (SMTP_MEM,
 		    "smtp_mime_binary_body_parse: FREE pointer=%p\n",
 		    mmapstr);
-#endif
-
 
 	return SMTP_NO_ERROR;
 
@@ -706,7 +612,6 @@ smtp_mime_body_parse (char *message, unsigned int length, int encoding,
 
 	switch (encoding) {
 	case SMTP_MIME_MECHANISM_BASE64:
-		//DEBUG_SMTP(SMTP_DBG, "message = %s, index = %d,  length= %d \n", message, *index, length );
 		smtp_mime_base64_body_parse (message, length, &index, &result,
 					     &result_len);
 		nel_stream_put (stream->ts_stream, result, result_len);
@@ -714,8 +619,6 @@ smtp_mime_body_parse (char *message, unsigned int length, int encoding,
 
 
 	case SMTP_MIME_MECHANISM_QUOTED_PRINTABLE:
-		DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-			    __LINE__);
 		smtp_mime_quoted_printable_body_parse (message, length,
 						       &index, &result,
 						       &result_len, FALSE);
@@ -726,8 +629,6 @@ smtp_mime_body_parse (char *message, unsigned int length, int encoding,
 	case SMTP_MIME_MECHANISM_8BIT:
 	case SMTP_MIME_MECHANISM_BINARY:
 	default:
-		DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-			    __LINE__);
 		smtp_mime_binary_body_parse (message, length, &index, &result,
 					     &result_len);
 		nel_stream_put (stream->ts_stream, result, result_len);
@@ -747,6 +648,5 @@ smtp_mime_body_init (
 #endif
 	)
 {
-	//dummy function just to let body.c compiled to main program. 
-	//wyong, 20231022 
+	//dummy function just to let body.c linked to main program. 
 }

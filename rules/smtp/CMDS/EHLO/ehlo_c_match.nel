@@ -1,0 +1,33 @@
+static int nid = 5;
+static char des[] = "those EHLO command with domain in black list will not be allowed!";
+event struct smtp_atk	*EHLO_BAD_STRING;
+static char *ehlo_black_list[] = {
+	"foo", 
+	"bar", 
+	"bla",
+};
+static struct match_info *ehlo_black_list_tree;
+
+init{
+	int i;
+	for(i=0; i< 3; i++) {
+		print("ehlo_black_list[%d]=%s\n", i, ehlo_black_list[i]);
+	}
+
+	ehlo_black_list_tree = match_init(ehlo_black_list, 3 , 0 );
+
+}
+
+EHLO_BAD_STRING: ehlo_req(buf_match($1->host_name, $1->host_name_len, ehlo_black_list_tree))
+	{
+		print("found supectious user in ehlo command, this maybe a attack!\n");
+		smtp_deny( $0 ); 
+	}
+	;
+
+
+BAD_EHLO_REQ: EHLO_BAD_STRING
+	{
+
+	}
+	;

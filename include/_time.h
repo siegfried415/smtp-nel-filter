@@ -63,4 +63,60 @@ struct smtp_orig_date *smtp_orig_date_new (struct smtp_date_time
 
 void smtp_orig_date_free (struct smtp_orig_date *orig_date);
 
+int
+smtp_day_of_week_parse (const char *message, size_t length,
+                        size_t * index, int *result);
+
+
+int
+smtp_date_parse (const char *message, size_t length,
+                 size_t * index, int *pday, int *pmonth, int *pyear);
+
+int
+smtp_time_parse (const char *message, size_t length,
+                 size_t * index, int *phour, int *pmin, int *psec, int *pzone);
+
+int
+smtp_day_name_parse (const char *message, size_t length,
+                     size_t * index, int *result);
+
+int
+smtp_day_parse (const char *message, size_t length,
+			size_t * index, int *result);
+
+int
+smtp_month_parse (const char *message, size_t length,
+                  size_t * index, int *result);
+
+
+int
+smtp_year_parse (const char *message, size_t length,
+                 size_t * index, int *result);
+
+int
+smtp_month_name_parse (const char *message, size_t length,
+                       size_t * index, int *result);
+
+
+int
+smtp_time_of_day_parse (const char *message, size_t length,
+	size_t * index, int *phour, int *pmin, int *psec);
+
+int
+smtp_zone_parse (const char *message, size_t length,
+                 size_t * index, int *result);
+
+int
+smtp_hour_parse (const char *message, size_t length,
+                 size_t * index, int *result);
+
+int
+smtp_minute_parse (const char *message, size_t length,
+                   size_t * index, int *result);
+
+int
+smtp_second_parse (const char *message, size_t length,
+                   size_t * index, int *result);
+
+
 #endif

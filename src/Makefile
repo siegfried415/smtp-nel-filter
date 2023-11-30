@@ -38,7 +38,7 @@ RE2C_OBJS    =  $(RE2C_SRCS:.c=.o)
 
 C_OBJS       =  $(C_SRCS:.c=.o)
 %.o 	:%.c
-	$(CC) -g -gstabs+ -DUSE_NEL  -c -o $@ \
+	$(CC) -g -gstabs+ -DUSE_NEL -c -o $@ \
 		-I$(PCAP_INC_DIR) -I$(NIDS_INC_DIR) -I$(NEL_INC_DIR) \
 		-I../include $<
 
@@ -53,5 +53,5 @@ install:${TARGET}
 all	:${TAEGET} 
 clean:
 	rm -f ${TARGET} *.o   
-	rm -f $(RE2C_SOURCES) 
+	rm -f $(RE2C_SRCS) 
 	rm -f core

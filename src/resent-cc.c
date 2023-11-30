@@ -1,19 +1,11 @@
-
-
-
-/*
- * $Id: resent-cc.c,v 1.3 2005/11/19 09:04:56 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
+#include "mime.h"
+#include "address.h"
 #include "cc.h"
 #include "resent-cc.h"
 
@@ -33,20 +25,6 @@ smtp_resent_cc_parse (const char *message, size_t length,
 
 	cur_token = *index;
 
-#if 0				//xiayu 2005.11.18 commented
-	r = smtp_token_case_insensitive_parse (message, length,
-					       &cur_token, "Resent-Cc");
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-
-	r = smtp_colon_parse (message, length, &cur_token);
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-#endif
 	r = smtp_address_list_parse (message, length, &cur_token, &addr_list);
 	if (r != SMTP_NO_ERROR) {
 		res = r;

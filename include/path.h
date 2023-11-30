@@ -22,4 +22,13 @@ int smtp_path_parse (const char *message, size_t length,
 		     size_t * index, struct smtp_path **result);
 
 
+int
+smtp_reverse_path_parse (char *message, size_t length, size_t * index,
+                         char **address);
+
+int
+smtp_forward_path_parse (char *message, size_t length, size_t * index,
+                         char **address);
+
+
 #endif

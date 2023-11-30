@@ -1,14 +1,9 @@
-/*
- * data.re
- * $Id: data.re,v 1.23 2005/12/20 08:30:43 xiay Exp $
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "mem_pool.h"
-
 #include "smtp.h"
+#include "mime.h"
 #include "data.h"
 #include "command.h"
 
@@ -20,7 +15,7 @@ int data_id;
 extern int ack_id;
 #endif
 
-extern max_smtp_ack_len;
+extern int max_smtp_ack_len;
 ObjPool_t smtp_cmd_data_pool;
 
 void
@@ -81,7 +76,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		cur_token = 3;
 		psmtp->mail_state = SMTP_MAIL_STATE_DATA;
 		psmtp->curr_parse_state = SMTP_STATE_PARSE_MESSAGE;
-		//goto ack_new;
 		goto crlf;
 	}
 	"421"
@@ -89,9 +83,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 421\n");
 		code = 421;
 		cur_token = 3;
-		//psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//psmtp->sender = NULL;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -100,9 +91,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 451\n");
 		code = 451;
 		cur_token = 3;
-		//psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//psmtp->sender = NULL;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -111,9 +99,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 500\n");
 		code = 500;
 		cur_token = 3;
-		//psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//psmtp->sender = NULL;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -122,9 +107,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 501\n");
 		code = 501;
 		cur_token = 3;
-		//psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//psmtp->sender = NULL;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -133,9 +115,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 503\n");
 		code = 503;
 		cur_token = 3;
-		//psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//psmtp->sender = NULL;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -144,9 +123,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: 554\n");
 		code = 554;
 		cur_token = 3;
-		//psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//psmtp->sender = NULL;
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -157,12 +133,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		cur_token = 3;
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_data_parse: %d\n", code);
 
-		//if (code >= 300) {
-		//	psmtp->curr_parse_state = SMTP_STATE_PARSE_COMMAND;
-		//	psmtp->sender = NULL;
-		//}
-
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -205,7 +175,6 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 
 	/* Fixme: how to deal with the client? */
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -214,13 +183,9 @@ smtp_ack_data_parse (struct smtp_info *psmtp)
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %d\n", len, cur_token);
-
-	//psmtp->svr_data += cur_token;
-	//psmtp->svr_data_len -= cur_token;
+	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %lu\n", len, cur_token);
 	r = sync_server_data (psmtp, cur_token);
 	if (r < 0) {
-		//      res = SMTP_ERROR_TCPAPI_WRITE;
 		goto err;
 	}
 
@@ -255,11 +220,10 @@ smtp_cmd_data_new (int len)
 	}
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_data_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_data_pool, data);
-	//data->event_type = SMTP_CMD_DATA;
-	//data->nel_id = data_id;
 
-	//data->count = 0;
+#ifdef USE_NEL
 	NEL_REF_INIT (data);
+#endif 
 
 	data->len = len;
 	return data;
@@ -275,46 +239,9 @@ smtp_cmd_data_parse (struct smtp_info *psmtp, char *message, size_t length,
 
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_data_parse\n");
 
-#if 0
-	/* Let NEL do the dirty thing, wyong, 2005.11.8  */
-	/*
-	 * Sanity checks. With ESMTP command pipelining the client can send DATA
-	 * before all recipients are rejected, so don't report that as a protocol
-	 * error.
-	 */
-	if (psmtp->rcpt_count == 0) {
-		if (psmtp->sender == NULL) {
-			r = reply_to_client (ptcp,
-					     "503 Error: need RCPT command\r\n");
-			if (r != SMTP_NO_ERROR) {
-				res = r;
-				goto err;
-			}
-		}
-		else {
-			r = reply_to_client (ptcp,
-					     "554 Error: no valid recipients\r\n");
-			if (r != SMTP_NO_ERROR) {
-				res = r;
-				goto err;
-			}
-		}
-		res = SMTP_ERROR_PROTO;
-		goto err;
-	}
-#endif
-
 	r = smtp_wsp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 DATA Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
@@ -340,18 +267,11 @@ smtp_cmd_data_parse (struct smtp_info *psmtp, char *message, size_t length,
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//fprintf(stderr, "found a deny event\n");
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 DATA cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -360,12 +280,6 @@ smtp_cmd_data_parse (struct smtp_info *psmtp, char *message, size_t length,
 	DEBUG_SMTP (SMTP_DBG, "\n");
 
 	psmtp->last_cli_event_type = SMTP_CMD_DATA;
-
-	//wyong, 20231003
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
-	//r = write_to_server(ptcp, psmtp);
-
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;

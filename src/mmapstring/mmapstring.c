@@ -1,8 +1,3 @@
-/*
- * $Id: mmapstring.c,v 1.5 2005/12/07 09:44:31 wyong Exp $
- */
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,30 +11,8 @@
 #include "chash.h"
 #include "mmapstring.h"
 
-
 #define MMAP_UNAVAILABLE	1
-#define SMTP_MEM_1		0
-#define DEBUG_SMTP(tag,fmt...)\
-do {\
-	if(tag) {\
-		fprintf(stderr, "%s [%d]: ", __FILE__, __LINE__);\
-		fprintf(stderr, fmt);\
-	}\
-}while(0)
-//xiayu add end
 
-
-#if 0
-#define malloc(size) Malloc(size,__FILE__,__LINE__)
-#define free(b) Free(b,__FILE__,__LINE__)
-//#define realloc(b, size) Realloc(b, size, __FILE__,__LINE__)
-#define checksum() mem_checkAll()
-#else
-#define malloc(size) malloc(size)
-#define free(b) free(b)
-//#define realloc(b, size) realloc(b, size)
-#define checksum()
-#endif
 
 #define MMAPSTRING_MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MMAPSTRING_MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -249,9 +222,6 @@ mmap_string_realloc_file (MMAPString * string)
 
 		data = mmap (NULL, string->allocated_len,
 			     PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
-		DEBUG_SMTP (SMTP_MEM_1,
-			    "mmap_string_realloc_file: MMAP pointer=%p\n",
-			    data);
 
 		if (data == MAP_FAILED) {
 			close (fd);
@@ -264,9 +234,6 @@ mmap_string_realloc_file (MMAPString * string)
 		string->fd = fd;
 		string->mmapped_size = string->allocated_len;
 		free (string->str);
-		DEBUG_SMTP (SMTP_MEM_1,
-			    "mmap_string_realloc_file: FREE pointer=%p\n",
-			    string->str);
 		string->str = data;
 	}
 	else {
@@ -279,9 +246,6 @@ mmap_string_realloc_file (MMAPString * string)
 		data = mmap (NULL, string->allocated_len,
 			     PROT_WRITE | PROT_READ, MAP_SHARED, string->fd,
 			     0);
-		DEBUG_SMTP (SMTP_MEM_1,
-			    "mmap_string_realloc_file: MMAP pointer=%p\n",
-			    data);
 
 		if (data == MAP_FAILED)
 			return NULL;
@@ -304,12 +268,6 @@ mmap_string_realloc_memory (MMAPString * string)
 	if (tmp == NULL)
 		string = NULL;
 	else {
-		DEBUG_SMTP (SMTP_MEM_1,
-			    "mmap_string_realloc_memory: REALLOC-FREE pointer=%p\n",
-			    string->str);
-		DEBUG_SMTP (SMTP_MEM_1,
-			    "mmap_string_realloc_memory: REALLOC-ALLOC pointer=%p\n",
-			    tmp);
 		string->str = tmp;
 	}
 
@@ -358,8 +316,6 @@ mmap_string_sized_new (size_t dfl_size)
 	string = malloc (sizeof (*string));
 	if (string == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "mmap_string_size_new: MALLOC pointer=%p\n",
-		    string);
 
 	string->allocated_len = 0;
 	string->len = 0;
@@ -396,12 +352,9 @@ mmap_string_new_len (const char *init, size_t len)
 {
 	MMAPString *string;
 
-	DEBUG_SMTP (SMTP_MEM_1, "mmap_string_new_len: len = %d\n", len);
 	if (len <= 0)
 		return mmap_string_new ("");
 	else {
-		DEBUG_SMTP (SMTP_MEM_1,
-			    "before mmap_string_sized_new: len = %d\n", len);
 		string = mmap_string_sized_new (len);
 		if (string == NULL)
 			return string;
@@ -429,12 +382,8 @@ mmap_string_free (MMAPString * string)
 #endif
 	{
 		free (string->str);
-		DEBUG_SMTP (SMTP_MEM_1, "mmap_string_free: FREE pointer=%p\n",
-			    string->str);
 	}
 	free (string);
-	DEBUG_SMTP (SMTP_MEM_1, "mmap_string_free: FREE pointer=%p\n",
-		    string);
 }
 
 MMAPString *

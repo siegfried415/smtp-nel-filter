@@ -26,18 +26,13 @@ struct smtp_mime_mechanism *smtp_mime_mechanism_new (int enc_type,
 
 void smtp_mime_mechanism_free (struct smtp_mime_mechanism *mechanism);
 
-
-
 void smtp_mime_encoding_free (struct smtp_mime_mechanism *encoding);
-
-//int smtp_mime_encoding_parse(const char * message, size_t length,
-//                          size_t * index,
-//                          struct smtp_mime_mechanism ** result);
 
 int smtp_mime_encoding_parse (struct smtp_part *part,
 			      const char *message, size_t length,
 			      size_t * index,
-			      struct smtp_mime_mechanism **result);
+			      int *result 
+			     );
 
 int smtp_mime_transfer_encoding_get (struct smtp_mime_fields *fields);
 

@@ -1,8 +1,3 @@
-/*
- * mem_pool.c
- *
- */
-
 #include <pthread.h>
 #include <stdlib.h>
 
@@ -133,7 +128,6 @@ alloc_mem (ObjPool_t * objPool)
 {
 	void *tmp;
 
-	/* NOTE, NOTE, NOTE, add thread control, wyong, 2004.10.25 */
 	if (!(tmp = __obj_alloc_fromPool (objPool))) {
 		if (__objPool_alloc_more
 		    (objPool, objPool->size, MEM_POOL_REALLOC_LEN) > 0) {

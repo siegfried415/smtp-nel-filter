@@ -1,8 +1,3 @@
-/*
- * ehlo_match.nel
- * $Id: ehlo_nel_match.nel,v 1.3 2005/11/16 06:19:18 wyong Exp $
- */
-
 static int nid = 5;
 static char des[] = "those EHLO command include 'foo' will not be allowed!";
 event struct smtp_atk	*EHLO_BAD_STRING;

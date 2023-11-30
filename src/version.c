@@ -1,18 +1,8 @@
-
-
-
-/*
- * $Id: version.c,v 1.4 2005/11/19 09:04:56 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "mime.h"
 
@@ -33,8 +23,6 @@ smtp_mime_version_parse (const char *message, size_t length,
 
 	cur_token = *index;
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_wsp_parse (message, length, &cur_token);
 	if ((r != SMTP_NO_ERROR) && (r != SMTP_ERROR_PARSE))
 		return r;
@@ -45,26 +33,18 @@ smtp_mime_version_parse (const char *message, size_t length,
 	if (r != SMTP_NO_ERROR)
 		return r;
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_unstrict_char_parse (message, length, &cur_token, '.');
 	if (r != SMTP_NO_ERROR)
 		return r;
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_cfws_parse (message, length, &cur_token);
 	if ((r != SMTP_NO_ERROR) && (r != SMTP_ERROR_PARSE))
 		return r;
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_number_parse (message, length, &cur_token, &low);
 	if (r != SMTP_NO_ERROR)
 		return r;
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		return r;

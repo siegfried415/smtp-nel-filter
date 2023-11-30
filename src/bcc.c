@@ -1,18 +1,8 @@
-
-/*
- * $Id: bcc.c,v 1.4 2005/11/29 06:29:26 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-//#include "smtp.h"
-//#include "headers.h"
-
 #include "smtp.h"
 #include "address.h"
 #include "bcc.h"
@@ -27,7 +17,7 @@ smtp_bcc_new (struct smtp_address_list *bcc_addr_list)
 	bcc = malloc (sizeof (*bcc));
 	if (bcc == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_bcc_new: MALLOC pointer=%p\n", bcc);
+	DEBUG_SMTP (SMTP_MEM, "smtp_bcc_new: MALLOC pointer=%p\n", bcc);
 
 	bcc->bcc_addr_list = bcc_addr_list;
 
@@ -41,7 +31,7 @@ smtp_bcc_free (struct smtp_bcc *bcc)
 	if (bcc->bcc_addr_list != NULL)
 		smtp_address_list_free (bcc->bcc_addr_list);
 	free (bcc);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_bcc_free: FREE pointer=%p\n", bcc);
+	DEBUG_SMTP (SMTP_MEM, "smtp_bcc_free: FREE pointer=%p\n", bcc);
 }
 
 /*
@@ -61,21 +51,6 @@ smtp_bcc_parse (const char *message, size_t length,
 
 	cur_token = *index;
 	addr_list = NULL;
-
-#if 0
-	r = smtp_token_case_insensitive_parse (message, length,
-					       &cur_token, "Bcc");
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-
-	r = smtp_colon_parse (message, length, &cur_token);
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-#endif
 
 	r = smtp_address_list_parse (message, length, &cur_token, &addr_list);
 	switch (r) {

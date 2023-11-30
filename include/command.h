@@ -70,7 +70,7 @@ enum smtp_allow_type
 	SMTP_ALLOW_TIME,
 	SMTP_ALLOW_TLS,
 	SMTP_ALLOW_TURN,
-	SMTP_ALLOW_VERB,	//xiayu 2005.10.10
+	SMTP_ALLOW_VERB,
 	SMTP_ALLOW_VRFY,
 	SMTP_ALLOW_X_EXPS,	// X-EXPS, X-EXPS=LOGIN 
 	SMTP_ALLOW_X_LINK2STATE,	// X-LINK2STATE
@@ -120,7 +120,7 @@ void smtp_ack_free (struct smtp_ack *ack);
 
 struct smtp_ack *smtp_ack_new (int len, int code);
 
-//int parse_smtp_ack( struct smtp_info *psmtp);
-//int parse_smtp_command ( struct smtp_info *psmtp);
+int parse_smtp_ack( struct smtp_info *psmtp);
+int parse_smtp_command ( struct smtp_info *psmtp);
 
 #endif

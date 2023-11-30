@@ -18,10 +18,10 @@ void smtp_cmd_ehlo_init (
 	);
 
 int smtp_ack_ehlo_param_auth_parse (struct smtp_info *psmtp,
-				    char *message, int length, int *index);
+				    char *message, int length, size_t *index);
 
 int smtp_ack_ehlo_param_parse (struct smtp_info *psmtp,
-			       char *message, int length, int *index);
+			       char *message, int length, size_t *index);
 
 int smtp_ack_ehlo_parse (struct smtp_info *psmtp);
 

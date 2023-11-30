@@ -5,12 +5,13 @@
 #include <unistd.h>
 
 #include "mem_pool.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "address.h"
 #include "helo.h"
 #include "command.h"
+#include "rcpt-to.h"
+#include "mail-from.h"
 
 #ifdef USE_NEL
 #include "engine.h"
@@ -19,28 +20,20 @@ int helo_id;
 extern int ack_id;
 #endif
 
-
-/* add var_disable_helo_cmd for debug purpose, wyong, 2005.9.29  */
 int var_disable_helo_cmd = 0;
 int var_helo_required;
 ObjPool_t smtp_cmd_helo_pool;
 
+void
+smtp_cmd_helo_init (
 #ifdef USE_NEL
-void
-smtp_cmd_helo_init (struct nel_eng *eng)
-{
-	create_mem_pool (&smtp_cmd_helo_pool,
-			 sizeof (struct smtp_cmd_helo), SMTP_MEM_STACK_DEPTH);
-	//nel_func_name_call(eng, (char *)&helo_id, "nel_id_of", "helo_req");
-}
-#else
-void
-smtp_cmd_helo_init ()
-{
-	create_mem_pool (&smtp_cmd_helo_pool,
-			 sizeof (struct smtp_cmd_helo), SMTP_MEM_STACK_DEPTH);
-}
+	struct nel_eng *eng
 #endif
+)
+{
+	create_mem_pool (&smtp_cmd_helo_pool,
+			 sizeof (struct smtp_cmd_helo), SMTP_MEM_STACK_DEPTH);
+}
 
 
 void
@@ -50,10 +43,6 @@ smtp_helo_reset (struct smtp_info *psmtp)
 		smtp_string_free (psmtp->helo_name);
 		psmtp->helo_name = NULL;
 	}
-	//if (psmtp->domain) {
-	//      smtp_domain_free(psmtp->domain);
-	//      psmtp->domain = NULL;
-	//}
 }
 
 #define YYCURSOR  p1
@@ -72,8 +61,7 @@ space	= [ ];
 */
 
 int
-smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp)
+smtp_ack_helo_parse ( struct smtp_info *psmtp)
 {
 	struct smtp_ack *ack;
 	int r, res;
@@ -98,14 +86,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 250;
 
 		cur_token = 3;
-		//r = smtp_domain_parse(buf, len, &cur_token, &psmtp->domain);	
-		//if (r != SMTP_NO_ERROR) {
-		//	res = r;
-		//	goto err;
-		//}
-		//DEBUG_SMTP(SMTP_DBG, "psmtp->domain: %s\n", psmtp->domain);
-
-		//xiayu 2005.12.3 command state dfa
 		if (psmtp->mail_state != SMTP_MAIL_STATE_HELO
 			/*&& psmtp->mail_state != SMTP_MAIL_STATE_RSET*/)
 		{
@@ -123,7 +103,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 421;
 		cur_token = 3;
 		smtp_helo_reset(psmtp);
-		//goto ack_new;
 		goto crlf;
 	}
 	"451"
@@ -132,7 +111,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 451;
 		cur_token = 3;
 		smtp_helo_reset(psmtp);
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -142,7 +120,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 500;
 		cur_token = 3;
 		smtp_helo_reset(psmtp);
-		//goto ack_new;
 		goto crlf;
 	}
 	"501"
@@ -151,7 +128,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 501;
 		cur_token = 3;
 		smtp_helo_reset(psmtp);
-		//goto ack_new;
 		goto crlf;
 	}
 	"504"
@@ -160,7 +136,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 504;
 		cur_token = 3;
 		smtp_helo_reset(psmtp);
-		//goto ack_new;
 		goto crlf;
 	}
 	"550"
@@ -169,7 +144,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 550;
 		cur_token = 3;
 		smtp_helo_reset(psmtp);
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -182,7 +156,6 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		if (code >= 300) {
 			smtp_helo_reset(psmtp);
 		}
-		//goto ack_new;
 		goto crlf;
 	}
 
@@ -234,12 +207,7 @@ smtp_ack_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %d\n", len, cur_token);
-
-	//wyong, 20231003
-	//psmtp->svr_data += cur_token;
-	//psmtp->svr_data_len -= cur_token;
-	//r = write_to_client(ptcp, psmtp);
+	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %lu\n", len, cur_token);
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -267,8 +235,6 @@ smtp_cmd_helo_free (struct smtp_cmd_helo *helo)
 {
 	if (helo->host_name) {
 		smtp_atom_free (helo->host_name);
-		//xiayu 2005.11.22 debug should use the proper free func
-		//smtp_string_free(helo->host_name);
 	}
 	free_mem (&smtp_cmd_helo_pool, (void *) helo);
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_helo_free: pointer=%p, elm=%p\n",
@@ -285,11 +251,8 @@ smtp_cmd_helo_new (int len, char *host_name)
 	}
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_helo_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_helo_pool, (void *) helo);
-	//helo->event_type = SMTP_CMD_HELO;
-	//helo->nel_id = helo_id;
 
 #ifdef USE_NEL
-	//helo->count = 0;
 	NEL_REF_INIT (helo);
 #endif
 	helo->len = len;
@@ -309,8 +272,7 @@ smtp_cmd_helo_new (int len, char *host_name)
 
 
 int
-smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp, char *message, size_t length, size_t * index)
+smtp_cmd_helo_parse ( struct smtp_info *psmtp, char *message, size_t length, size_t * index)
 {
 	struct smtp_cmd_helo *helo = NULL;
 	char *host_name;
@@ -320,15 +282,10 @@ smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_helo_parse\n");
 
 	/* if nel configureable variable var_disable_helo_cmd 
-	   is set to 1, don't allow the command pass through. wyong */
+	   is set to 1, don't allow the command pass through. */
 	if (var_disable_helo_cmd == 1) {
 		DEBUG_SMTP (SMTP_DBG,
 			    "smtp_cmd_helo_parse:var_disable_helo_cmd\n");
-		//r = reply_to_client(ptcp, "550 HELO cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_NO_ERROR;
 		goto err;
 	}
@@ -336,14 +293,6 @@ smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 HELO Syntax: no SPACE.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
@@ -351,14 +300,6 @@ smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_atom_parse (message, length, &cur_token, &host_name);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 HELO Syntax: host name error.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
@@ -367,14 +308,6 @@ smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	if (r != SMTP_NO_ERROR) {
 		DEBUG_SMTP (SMTP_DBG, "\n");
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 HELO Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto free;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto free;
 	}
 
@@ -403,27 +336,17 @@ smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 #endif
 
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//fprintf(stderr, "found a deny event\n");
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 HELO cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
 
 	*index = cur_token;
 	psmtp->last_cli_event_type = SMTP_CMD_HELO;
-
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -434,8 +357,6 @@ smtp_cmd_helo_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
       free:
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_ehlo_parse: Free\n");
 	if (host_name) {
-		//xiayu 2005.11.22 debug should use the proper free func
-		//smtp_string_free(host_name);
 		smtp_atom_free (host_name);
 	}
 	if (psmtp->helo_name) {

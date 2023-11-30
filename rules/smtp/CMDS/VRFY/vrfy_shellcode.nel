@@ -1,8 +1,3 @@
-/*
- * vrfy_shellcode.nel
- * $Id: vrfy_shellcode.nel,v 1.2 2005/11/28 02:16:35 wyong Exp $
- */
-
 static int nid = 47;
 static char type[] = "vulnerability";
 static char des[]="VRFY command have instructions that can potentially executed as shellcode."; 

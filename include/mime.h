@@ -23,7 +23,6 @@ struct mailmime_list
 };
 
 
-//wyong, 20231023 
 struct smtp_mime_text
 {
 #ifdef USE_NEL
@@ -79,7 +78,7 @@ struct mailmime
 #ifdef USE_NEL
 	NEL_REF_DEF
 #endif
-		/* parsing state */
+	/* parsing state */
 	int mm_state;
 
 	/* parent information */
@@ -107,15 +106,13 @@ struct mailmime
 		{
 			struct smtp_mime_data *mm_preamble;
 			struct smtp_mime_data *mm_epilogue;
-
-			//wyong, 20231021 
-			/* clist */ struct mailmime_list *mm_mp_list;
+			struct mailmime_list *mm_mp_list;
 		} mm_multipart;
 
 		/* message */
 		struct
 		{
-			//struct smtp_fields * mm_fields;
+			struct smtp_mime_fields * mm_fields;
 			struct mailmime *mm_msg_mime;
 		} mm_message;
 
@@ -261,7 +258,7 @@ int smtp_mime_set_body_text (struct mailmime *build_info,
 			     char *data_str, size_t length);
 
 void smtp_mime_set_imf_fields (struct mailmime *build_info,
-			       struct smtp_fields *fields);
+			       struct smtp_mime_fields *fields);
 
 void smtp_mime_decoded_part_free (char *part);
 
@@ -278,7 +275,6 @@ char *smtp_mime_content_type_param_get (struct smtp_mime_content_type
 char *smtp_mime_extract_boundary (struct smtp_mime_content_type
 				  *content_type);
 
-//wyong, 20231021
 struct smtp_mime_text_stream
 {
 #ifdef USE_NEL
@@ -373,11 +369,27 @@ int smtp_dot_atom_parse (const char *message, size_t length,
 int smtp_wsp_parse (const char *message, size_t length, size_t * index);
 
 
-int smtp_str_crlf_parse (char *message, int length, int *index);
+int smtp_str_crlf_parse (char *message, int length, size_t *index);
 
 
 int smtp_unstrict_crlf_parse (const char *message,
 			      size_t length, size_t * index);
+
+int smtp_unstructured_parse (const char *message, size_t length,
+                         size_t * index, char **result); 
+
+int smtp_wsp_unstrict_crlf_parse (const char *message,
+                              size_t length, size_t * index); 
+
+int smtp_wsp_atom_parse (const char *message, size_t length,
+                     size_t * index, char **result); 
+
+void smtp_string_free (char *str);
+char * smtp_string_new (char *str, int len);
+
+int smtp_mime_token_parse (const char *message, size_t length,
+                       size_t * index, char **token);
+
 
 /* mailmime build */
 struct mailmime *smtp_mime_new (int mm_type,
@@ -393,9 +405,49 @@ struct mailmime *smtp_mime_new (int mm_type,
 				struct smtp_mime_data *mm_epilogue,
 				struct mailmime_list *mm_mp_list,
 				//for rfc message 
-				struct smtp_fields *mm_fields,
+				struct smtp_mime_fields *mm_fields,
 				struct mailmime *mm_msg_mime);
 
 void smtp_mime_free (struct mailmime *mime);
+
+int is_ftext (char ch);
+
+int
+smtp_struct_multiple_parse (const char *message, size_t length,
+                            size_t * index, clist ** result,
+                            smtp_struct_parser * parser,
+                            smtp_struct_destructor * destructor);
+
+int
+smtp_comment_parse (const char *message, size_t length, size_t * index);
+
+int
+smtp_mime_attribute_parse (const char *message, size_t length,
+                           size_t * index, char **result);
+
+int
+smtp_at_sign_parse (const char *message, size_t length, size_t * index);
+
+
+int
+smtp_point_parse (const char *message, size_t length, size_t * index);
+
+int
+smtp_plus_parse (const char *message, size_t length, size_t * index); 
+
+int
+smtp_comma_parse (const char *message, size_t length, size_t * index);
+
+int
+smtp_wsp_at_sign_parse (const char *message, size_t length, size_t * index);
+
+
+int
+smtp_minus_parse (const char *message, size_t length, size_t * index);
+
+int
+smtp_ignore_unstructured_parse (const char *message, size_t length,
+                                size_t * index);
+
 
 #endif

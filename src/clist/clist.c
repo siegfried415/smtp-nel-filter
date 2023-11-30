@@ -1,7 +1,3 @@
-/*
- * $Id: clist.c,v 1.6 2005/12/07 09:44:31 wyong Exp $
- */
-
 #include <stdlib.h>
 #include "clist.h"
 
@@ -14,11 +10,6 @@ clist_new ()
 	lst = (clist *) malloc (sizeof (clist));
 	if (!lst)
 		return NULL;
-	//DEBUG_SMTP(SMTP_MEM_1, "clist_new: MALLOC pointer=%p\n", lst);
-
-	//xiayu 2005.11.30
-	//lst->count = 0;  
-	//NEL_REF_INIT(lst);
 
 	lst->first = lst->last = NULL;
 	lst->number = 0;
@@ -35,12 +26,10 @@ clist_free (clist * lst)
 	while (l1) {
 		l2 = l1->next;
 		free (l1);
-		//DEBUG_SMTP(SMTP_MEM_1, "clist_free: FREE pointer=%p\n", l1);
 		l1 = l2;
 	}
 
 	free (lst);
-	//DEBUG_SMTP(SMTP_MEM_1, "clist_free: FREE pointer=%p\n", lst);
 }
 
 #ifdef NO_MACROS
@@ -116,7 +105,6 @@ clist_insert_before (clist * lst, clistiter * iter, void *data)
 	c = (clistcell *) malloc (sizeof (clistcell));
 	if (!c)
 		return -1;
-	//DEBUG_SMTP(SMTP_MEM_1, "clist_insert_before: MALLOC pointer=%p\n", c);
 
 	c->data = data;
 	lst->number++;
@@ -154,7 +142,6 @@ clist_insert_after (clist * lst, clistiter * iter, void *data)
 	c = (clistcell *) malloc (sizeof (clistcell));
 	if (!c)
 		return -1;
-	//DEBUG_SMTP(SMTP_MEM_1, "clist_insert_after: MALLOC pointer=%p\n", c);
 
 	c->data = data;
 	lst->number++;
@@ -207,7 +194,6 @@ clist_delete (clist * lst, clistiter * iter)
 	}
 
 	free (iter);
-	//DEBUG_SMTP(SMTP_MEM_1, "clist_delete: FREE pointer=%p\n", iter);
 	lst->number--;
 
 	return ret;

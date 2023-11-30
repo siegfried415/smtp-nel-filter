@@ -63,4 +63,14 @@ int smtp_mime_body_parse (char *message, unsigned int length, int encoding,
 			  struct smtp_mime_text_stream *stream);
 
 
+
+int
+smtp_mime_body_init (
+#ifdef USE_NEL
+                            struct nel_eng *eng
+#else
+                            void
+#endif
+        );
+
 #endif

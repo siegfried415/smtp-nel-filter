@@ -6,8 +6,8 @@
 
 #include "clist.h"
 #include "mem_pool.h"
-
 #include "smtp.h"
+#include "mime.h" 
 #include "address.h"
 #include "expn.h"
 #include "command.h"
@@ -20,8 +20,8 @@ int expn_id;
 int ack_expn_id;
 #endif
 
-extern max_smtp_ack_multiline_count;
-extern max_smtp_ack_len;
+extern int max_smtp_ack_multiline_count;
+extern int max_smtp_ack_len;
 
 
 int var_disable_expn_cmd;
@@ -40,10 +40,6 @@ smtp_cmd_expn_init (
 			 sizeof (struct smtp_ack_expn), SMTP_MEM_STACK_DEPTH);
 	create_mem_pool (&smtp_cmd_expn_pool,
 			 sizeof (struct smtp_cmd_expn), SMTP_MEM_STACK_DEPTH);
-#ifdef USE_NEL
-	//nel_func_name_call(eng, (char *)&ack_expn_id, "nel_id_of", "expn_ack");
-	//nel_func_name_call(eng, (char *)&expn_id, "nel_id_of", "expn_req");
-#endif
 }
 
 
@@ -89,11 +85,7 @@ smtp_ack_expn_new (int len, int code, clist * mb_list)
 	DEBUG_SMTP (SMTP_MEM, "smtp_ack_expn_new: pointer=%p, elm=%p\n",
 		    &smtp_ack_expn_pool, (void *) ack);
 
-	//ack->event_type = SMTP_ACK_EXPN;
-	//ack->nel_id = ack_expn_id;
-
 #ifdef USE_NEL
-	//ack->count = 0;
 	NEL_REF_INIT (ack);
 #endif
 	ack->len = len;		/* the total length of this ack line */
@@ -118,8 +110,7 @@ smtp_ack_expn_new (int len, int code, clist * mb_list)
 
 
 int
-smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp)
+smtp_ack_expn_parse ( struct smtp_info *psmtp)
 {
 	struct smtp_ack_expn *ack = NULL;
 	struct smtp_mailbox *mailbox = NULL;
@@ -132,23 +123,15 @@ smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	int len = psmtp->svr_data_len;
 
 	char *p1, *p2, *p3;
-
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	int last_crlf;
-#endif
-	int cur_token;
+	size_t cur_token;
 
 	DEBUG_SMTP (SMTP_DBG, "smtp_ack_expn_parse... \n");
 
 	p1 = buf;
 	p2 = buf + len;
-
 	code = 0;
 	multiline_count = 0;
 
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	last_crlf = 0;
-#endif
 	cur_token = 0;
 	while (1) {
 
@@ -190,15 +173,6 @@ smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 				goto free;
 			}
 
-#if 0	//xiayu 2005.11.22 let engine do the checking
-			DEBUG_SMTP(SMTP_DBG, "\n");
-			if (cur_token-last_crlf > max_smtp_ack_len) {
-				DEBUG_SMTP(SMTP_DBG, "smtp server ack line is too long\n");
-				res = SMTP_ERROR_PROTO;
-				goto free;
-			}
-			last_crlf = cur_token;
-#endif
 			if (mailbox_list == NULL) {
 				mailbox_list = clist_new();
 				if (mailbox_list == NULL) {
@@ -227,7 +201,7 @@ smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 				code = 250;
 
 			} else if (250 != code ) {
-				DEBUG_SMTP(SMTP_DBG, "Multi-line ack of EXPN does not has consistent codes: %s\n, psmtp->svr->data");
+				DEBUG_SMTP(SMTP_DBG, "Multi-line ack of EXPN does not has consistent codes: %s\n", psmtp->svr_data);
 				res = SMTP_ERROR_PARSE;
 				goto free;
 			}
@@ -250,14 +224,6 @@ smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 				goto free;
 			}
 
-			DEBUG_SMTP(SMTP_DBG, "\n");
-#if 0	//xiayu 2005.11.22 let engine do the checking
-			if (cur_token-last_crlf > max_smtp_ack_len) {
-				DEBUG_SMTP(SMTP_DBG, "smtp server ack line is too long\n");
-				res = SMTP_ERROR_PROTO;
-				goto free;
-			}
-#endif
 			if (mailbox_list == NULL) {
 				mailbox_list = clist_new();
 				if (mailbox_list == NULL) {
@@ -280,8 +246,6 @@ smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = atoi(p1-6);
 			DEBUG_SMTP(SMTP_DBG, "smtp_ack_expn_parse: %d\n", code);
 			cur_token = 3;
-
-			//mailbox_list = NULL;
 
 			r = smtp_str_crlf_parse(buf, len, &cur_token);
 			if (r != SMTP_NO_ERROR) {
@@ -334,11 +298,6 @@ smtp_ack_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		goto err;
 	}
 
-	//wyong, 20231003
-	//psmtp->svr_data += cur_token;
-	//psmtp->svr_data_len -= cur_token;
-	//r = write_to_client(ptcp, psmtp);
-
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -390,11 +349,7 @@ smtp_cmd_expn_new (int len, char *user_name, char *mail_box)
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_expn_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_expn_pool, (void *) expn);
 
-	//expn->event_type = SMTP_CMD_EXPN;
-	//expn->nel_id = expn_id;
-
 #ifdef USE_NEL
-	//expn->count = 0;
 	NEL_REF_INIT (expn);
 #endif
 	expn->len = len;
@@ -421,8 +376,7 @@ smtp_cmd_expn_new (int len, char *user_name, char *mail_box)
 
 
 int
-smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp, char *message, size_t length, size_t * index)
+smtp_cmd_expn_parse ( struct smtp_info *psmtp, char *message, size_t length, size_t * index)
 {
 	struct smtp_cmd_expn *expn;
 	char *display_name = NULL, *angle_addr = NULL;
@@ -432,16 +386,11 @@ smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_expn_parse\n");
 
 	/* if nel configureable variable var_disable_expn_cmd is set to 0, 
-	   don't allow the command pass through, wyong, 2005.9.26  */
+	   don't allow the command pass through */
 	//var_disable_expn_cmd = 1;
 	if (var_disable_expn_cmd == 1) {
 		DEBUG_SMTP (SMTP_DBG,
 			    "smtp_cmd_expn_parse: var_disable_expn_cmd\n");
-		//r = reply_to_client(ptcp, "550 EXPN cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -449,14 +398,6 @@ smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 EXPN Syntax error.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
@@ -468,7 +409,7 @@ smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	switch (r) {
 	case SMTP_NO_ERROR:
 		/* do nothing */
-		DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+		DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 		break;
 
 	case SMTP_ERROR_CONTINUE:
@@ -480,17 +421,9 @@ smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 						 &display_name);
 		if (r != SMTP_NO_ERROR) {
 			res = r;
-			//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-			//      r = reply_to_client(ptcp, "501 EXPN Syntax: parameters error.\r\n");
-			//      if (r != SMTP_NO_ERROR) {
-			//              res = r;
-			//              goto err;
-			//      }
-			//      res = SMTP_ERROR_PARSE;
-			//}
 			goto err;
 		}
-		DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+		DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 		break;
 	default:
 		DEBUG_SMTP (SMTP_DBG, "\n");
@@ -502,14 +435,6 @@ smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 EXPN Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto free;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto free;
 	}
 
@@ -533,29 +458,21 @@ smtp_cmd_expn_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 EXPN cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+	DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 	*index = cur_token;
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	psmtp->last_cli_event_type = SMTP_CMD_EXPN;
 
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;

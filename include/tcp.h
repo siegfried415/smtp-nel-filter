@@ -6,10 +6,7 @@
 enum
 {
 	TCP_CONN_NULL = 0,
-
-	//wyong, 20231025 
 	TCP_CONN_EST,
-
 	TCP_CONN_DATA,
 	TCP_CONN_ASST,
 	TCP_CONN_CLOSE,

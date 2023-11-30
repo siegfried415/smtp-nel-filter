@@ -1,18 +1,8 @@
-
-
-
-/*
- * $Id: time.c,v 1.4 2005/11/29 06:29:26 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "mime.h"
 #include "_time.h"
@@ -26,7 +16,7 @@ smtp_date_time_new (int dt_day, int dt_month, int dt_year,
 	date_time = malloc (sizeof (*date_time));
 	if (date_time == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_date_time_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_date_time_new: MALLOC pointer=%p\n",
 		    date_time);
 
 	date_time->dt_day = dt_day;
@@ -45,7 +35,7 @@ void
 smtp_date_time_free (struct smtp_date_time *date_time)
 {
 	free (date_time);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_date_time_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_date_time_free: FREE pointer=%p\n",
 		    date_time);
 }
 
@@ -879,62 +869,38 @@ smtp_orig_date_parse (const char *message, size_t length,
 
 	cur_token = *index;
 
-#if 0
-	r = smtp_token_case_insensitive_parse (message, length,
-					       &cur_token, "Date:");
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-#endif
-
-
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_date_time_parse (message, length, &cur_token, &date_time);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_ignore_unstructured_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
 		goto free_date_time;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	r = smtp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
 		goto free_date_time;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	orig_date = smtp_orig_date_new (date_time);
 	if (orig_date == NULL) {
 		res = SMTP_ERROR_MEMORY;
 		goto free_date_time;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	*result = orig_date;
 	*index = cur_token;
 
 	return SMTP_NO_ERROR;
 
       free_date_time:
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	smtp_date_time_free (date_time);
       err:
-	DEBUG_SMTP (SMTP_DBG, "%s_%s[%d]\n", __FILE__, __FUNCTION__,
-		    __LINE__);
 	return res;
 }
 
@@ -947,7 +913,7 @@ smtp_orig_date_new (struct smtp_date_time *dt_date_time)
 	orig_date = malloc (sizeof (*orig_date));
 	if (orig_date == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_orig_date_new: MALLOC pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_orig_date_new: MALLOC pointer=%p\n",
 		    orig_date);
 
 	orig_date->dt_date_time = dt_date_time;
@@ -962,6 +928,6 @@ smtp_orig_date_free (struct smtp_orig_date *orig_date)
 	if (orig_date->dt_date_time != NULL)
 		smtp_date_time_free (orig_date->dt_date_time);
 	free (orig_date);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_orig_date_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_orig_date_free: FREE pointer=%p\n",
 		    orig_date);
 }

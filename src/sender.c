@@ -1,18 +1,8 @@
-
-
-
-/*
- * $Id: sender.c,v 1.4 2005/11/29 06:29:26 xiay Exp $
-  RFC 2045, RFC 2046, RFC 2047, RFC 2048, RFC 2049, RFC 2231, RFC 2387
-  RFC 2424, RFC 2557, RFC 2183 Content-Disposition, RFC 1766  Language
- */
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mmapstring.h"
-
 #include "smtp.h"
 #include "address.h"
 #include "sender.h"
@@ -27,7 +17,7 @@ smtp_sender_new (struct smtp_mailbox *snd_mb)
 	sender = malloc (sizeof (*sender));
 	if (sender == NULL)
 		return NULL;
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_sender_new: FREE pointer=%p\n", sender);
+	DEBUG_SMTP (SMTP_MEM, "smtp_sender_new: FREE pointer=%p\n", sender);
 
 	sender->snd_mb = snd_mb;
 
@@ -41,7 +31,7 @@ smtp_sender_free (struct smtp_sender *sender)
 	if (sender->snd_mb != NULL)
 		smtp_mailbox_free (sender->snd_mb);
 	free (sender);
-	DEBUG_SMTP (SMTP_MEM_1, "smtp_sender_free: FREE pointer=%p\n",
+	DEBUG_SMTP (SMTP_MEM, "smtp_sender_free: FREE pointer=%p\n",
 		    sender);
 }
 
@@ -61,20 +51,6 @@ smtp_sender_parse (const char *message, size_t length,
 
 	cur_token = *index;
 
-#if 0				//xiayu 2005.11.18 commented
-	r = smtp_token_case_insensitive_parse (message, length,
-					       &cur_token, "Sender");
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-
-	r = smtp_colon_parse (message, length, &cur_token);
-	if (r != SMTP_NO_ERROR) {
-		res = r;
-		goto err;
-	}
-#endif
 	r = smtp_mailbox_parse (message, length, &cur_token, &mb);
 	if (r != SMTP_NO_ERROR) {
 		res = r;

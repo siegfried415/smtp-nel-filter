@@ -1,14 +1,11 @@
-/*
- * rset.re
- * $Id: rset.re,v 1.19 2005/12/20 08:30:43 xiay Exp $
- */
-
 
 #include "mem_pool.h"
-
 #include "smtp.h"
+#include "mime.h" 
 #include "rset.h"
 #include "command.h"
+#include "rcpt-to.h"
+#include "mail-from.h"
 
 #ifdef USE_NEL
 #include "engine.h"
@@ -31,9 +28,6 @@ smtp_cmd_rset_init (
 {
 	create_mem_pool (&smtp_cmd_rset_pool,
 			 sizeof (struct smtp_cmd_rset), SMTP_MEM_STACK_DEPTH);
-#ifdef USE_NEL
-	//nel_func_name_call(eng, (char *)&rset_id, "nel_id_of", "rset_req");
-#endif
 }
 
 #define YYCURSOR  p1
@@ -54,8 +48,7 @@ space	= [\040];
 
 
 int
-smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp)
+smtp_ack_rset_parse ( struct smtp_info *psmtp)
 {
 	struct smtp_ack *ack;
 	int r, res;
@@ -80,10 +73,7 @@ smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 		code = 250;
 		cur_token = 3;
 
-		//xiayu 2005.12.3 command state dfa
-		if (psmtp->mail_state != SMTP_MAIL_STATE_HELO
-			/*&& psmtp->mail_state != SMTP_MAIL_STATE_RSET*/)
-		{
+		if (psmtp->mail_state != SMTP_MAIL_STATE_HELO ) {
 			smtp_rcpt_reset(psmtp);
 			smtp_mail_reset(psmtp);
 		}
@@ -93,7 +83,6 @@ smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			psmtp->mail_state = SMTP_MAIL_STATE_ORIGN;
 		}
 
-		//goto ack_new;
 		goto crlf;
 	}
 	digit{3,3}
@@ -114,7 +103,6 @@ smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	/* *INDENT-ON* */
 
       crlf:
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	r = smtp_str_crlf_parse (buf, len, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = SMTP_ERROR_PARSE;
@@ -124,7 +112,6 @@ smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
       ack_new:
 	ack = smtp_ack_new (len, code);
 	if (!ack) {
-		DEBUG_SMTP (SMTP_DBG, "\n");
 		res = SMTP_ERROR_MEMORY;
 		goto err;
 	}
@@ -142,7 +129,6 @@ smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 	/* Fixme: how to deal with the client? */
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -151,9 +137,7 @@ smtp_ack_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %d\n", len, cur_token);
-	//psmtp->svr_data += len;
-	//psmtp->svr_data_len = 0;
+	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %lu\n", len, cur_token);
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -190,11 +174,8 @@ smtp_cmd_rset_new (int len)
 	}
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_rset_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_rset_pool, (void *) rset);
-	//rset->event_type = SMTP_CMD_RSET;
-	//rset->nel_id = rset_id;
 
 #ifdef USE_NEL
-	//rset->count = 0;
 	NEL_REF_INIT (rset);
 #endif
 	rset->len = len;
@@ -203,8 +184,7 @@ smtp_cmd_rset_new (int len)
 
 
 int
-smtp_cmd_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp, char *message, size_t length, size_t * index)
+smtp_cmd_rset_parse ( struct smtp_info *psmtp, char *message, size_t length, size_t * index)
 {
 	struct smtp_cmd_rset *rset = NULL;
 	size_t cur_token = *index;
@@ -214,20 +194,10 @@ smtp_cmd_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 	r = smtp_wsp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
-		DEBUG_SMTP (SMTP_DBG, "\n");
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 RSET Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "\n");
 	rset = smtp_cmd_rset_new (length);
 	if (rset == NULL) {
 		DEBUG_SMTP (SMTP_DBG,
@@ -247,18 +217,11 @@ smtp_cmd_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 #endif
 
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//fprintf(stderr, "found a deny event\n");
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 RSET cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -266,12 +229,6 @@ smtp_cmd_rset_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	*index = cur_token;
 
 	psmtp->last_cli_event_type = SMTP_CMD_RSET;
-
-	//wyong, 20231003
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
-	//r = write_to_server(ptcp, psmtp);
-
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;

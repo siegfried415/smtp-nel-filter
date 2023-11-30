@@ -1,7 +1,3 @@
-/* 
- * $Id: smtp.h,v 1.30 2005/12/12 09:35:41 xiay Exp $
- */
-
 #ifndef SMTP_H
 #define SMTP_H
 
@@ -11,7 +7,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-//#include <fcntl.h>
 #include <assert.h>
 #include <time.h>
 #include <sys/types.h>
@@ -19,7 +14,6 @@
 
 
 #include "nids.h"
-
 #include "clist.h"
 #include "analysis.h"
 
@@ -46,47 +40,32 @@
 #define CF_SMTP_ACCEPT	"SMTP accept new stream\n"
 #define CF_SMTP_PARSE_CMD	"SMTP parse smtp command..\n"
 
-//extern        int SMTP_STB;           /* stability debuging */
 #define SMTP_BUF	1
 #define SMTP_DBG	1
-#define SMTP_MEM	1	/* mem_pool memory debuging */
-#define SMTP_MEM_1	1	/* system calls(malloc,free,realloc,etc.) memory debuging */
+#define SMTP_MEM	1	/* memory debuging */
 
-#if 0
+#if 1
 #define DEBUG_SMTP(tag,fmt...)
 #else
-#define DEBUG_SMTP(tag,fmt...)\
+#define DEBUG_SMTP(tag,fmt, ...)\
 do {\
 	if(tag) {\
 		fprintf(stderr, "%s [%d]: ", __FILE__, __LINE__);\
-		fprintf(stderr, fmt);\
+		fprintf(stderr, fmt, ##__VA_ARGS__ );\
 	}\
 }while(0)
 #endif
 
-//typedef char bool;
 #ifndef TRUE
 #define TRUE 1
 #endif
+
 #ifndef FALSE
 #define FALSE 0
 #endif
 
 
 #define MIME_VERSION (1 << 16)
-
-/*
-  IMPORTANT NOTE:
-  
-  All allocation functions will take as argument allocated data
-  and will store these data in the structure they will allocate.
-  Data should be persistant during all the use of the structure
-  and will be freed by the free function of the structure
-
-  allocation functions will return NULL on failure
-*/
-
-
 
 
 
@@ -95,21 +74,15 @@ enum
 {
 
 	SMTP_ERROR_CONTINUE = 1,
-
 	SMTP_NO_ERROR = 0,
-
 	SMTP_ERROR_MEMORY = -1,	/* can't alloc memory */
 	SMTP_ERROR_FILE = -2,	/* can't open file */
 	SMTP_ERROR_ENGINE = -3,
-
 	SMTP_ERROR_TCPAPI_READ = -4,
 	SMTP_ERROR_TCPAPI_WRITE = -5,
-
 	SMTP_ERROR_INVAL = -6,	/* */
-
 	SMTP_ERROR_STACK_POP = -7,	/* part stack overflow */
 	SMTP_ERROR_STACK_PUSH = -8,	/* part stack overflow */
-
 	SMTP_ERROR_BUFFER = -9,	/* buffer overflow */
 
 	SMTP_ERROR_PROTO = -10,
@@ -117,12 +90,6 @@ enum
 	SMTP_ERROR_PARSE = -12,
 };
 
-
-
-
-
-struct smtp_info;
-struct neti_tcp_stream;
 
 /* memory stack size */
 #define SMTP_INFO_STACK_DEPTH 20
@@ -200,56 +167,12 @@ enum smtp_difference_type
 };
 
 /******************* for outputing to NEL Engine **************************/
-/*** some samples here ***/
-
-//todo, wyong, 20231006 
-//struct smtp_common_event {
-//      NEL_REF_DEF
-//      int len;
-//};
-
-
-//todo, wyong, 20231006 
-/* 长度域和字符数组域的顺序不可以改变！！！ */
 struct smtp_simple_event
 {
 	NEL_REF_DEF int len;
 	int str_len;
 	char *str;
 };
-
-
-
-
-
-
-//todo, wyong, 20231006 
-/* References: <00c601c5666c$160080c0$7d02010a@rain2a> */
-//struct smtp_msg_references {
-//      NEL_REF_DEF
-//      int len;
-//      short str_len;
-//      char *str;
-//};
-
-
-//todo, wyong, 20231006 
-/* Subject: rain_sub */
-//struct smtp_msg_subject {
-//      NEL_REF_DEF
-//      int len;
-//      short str_len;
-//      char *str;
-//};
-
-//todo, wyong, 20231006 
-/* Date: Thu, 26 May 2005 13:45:35 +0800 */
-//struct smtp_msg_date {
-//      NEL_REF_DEF
-//      int len;
-//      short str_len;
-//      char *str;
-//};
 
 struct smtp_atk
 {
@@ -336,14 +259,12 @@ struct smtp_info
 	struct smtp_info *next_node;
 	struct smtp_info *next_free;
 
-	//struct rfc2045_message *rfc;
 	struct smtp_info *next;
 	int completed;
 	short connect_state;	/* 0x01 :CLIENT_CLOSED  */
-	/* 0x02 :SERVER_CLOSED  */
+				/* 0x02 :SERVER_CLOSED  */
 
 #ifdef USE_NEL
-	/*** for NEL engine ***/
 	struct nel_env env;	/* for engine analysis */
 #endif
 
@@ -372,19 +293,10 @@ struct smtp_info
 	int cli_data_len;	/* length of data that has NOT been parsed yet
 				   calculated from "cli_data + cli_parse_len" */
 
-	//wyong, 20231009 
-	//char auth_allow[SMTP_AUTH_TYPE_NUM];
-	//int cmd_allow[SMTP_ALLOW_TYPE_NUM];   
 	char *auth_allow;
 	int *cmd_allow;
 
-	/*** for content parsing ***/
-	/* 下面几项用于解析嵌套正文 */
-	//struct smtp_part part_stack[SMTP_MSG_STACK_MAX_DEPTH];
-
-	//wyong, 20231009 
-	struct smtp_part *part_stack;
-
+	struct smtp_part *part_stack;	/*** for content parsing ***/
 	int part_stack_top;
 	int new_part_flag;
 
@@ -401,13 +313,11 @@ struct smtp_info
 	short permit;		/* whether the mail need drop or deny */
 
 	//struct        mailmime *mime;
-	void *user;
-
 };
 
 
 //int smtp_init (struct nel_eng *, char *);
-//void smtp_close_connection (struct neti_tcp_stream *, struct smtp_info *);
+//void smtp_close_connection (struct smtp_info *);
 
 //void process_smtp (void);
 //void smtp_cleanup(void);
@@ -422,8 +332,11 @@ int smtp_init (void);
 void smtp_cleanup (void);
 int sync_client_data (struct smtp_info *psmtp, int processed_data_len);
 int sync_server_data (struct smtp_info *psmtp, int processed_data_len);
-void reset_server_buf (struct smtp_info *sp, int *index);
-void reset_client_buf (struct smtp_info *sp, int *index);
+void reset_server_buf (struct smtp_info *sp, size_t *index);
+void reset_client_buf (struct smtp_info *sp, size_t *index);
+
+
+void free_smtp_info (struct smtp_info *psmtp);
 
 
 

@@ -1,6 +1,3 @@
-/*
- * $Id: chash.h,v 1.2 2005/11/03 01:37:59 wyong Exp $
- */
 
 #ifndef CHASH_H
 #define CHASH_H

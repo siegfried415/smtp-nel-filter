@@ -1,13 +1,3 @@
-/*
- * smtp.nel contain protocol desciption of SMTP protocol. 
- * $Id: smtp.nel,v 1.11 2005/12/08 03:30:22 wyong Exp $
- */
-
-struct smtp_info_user{
-	int vrfy_cnt;
-	int fail_vrfy_cnt;
-};
-
 atom	struct smtp_cmd_ehlo	*ehlo_req; 
 event	struct smtp_cmd_ehlo	*EHLO,
 				*BAD_EHLO_REQ, 
@@ -109,11 +99,11 @@ atom 	struct smtp_message_id *message_id;
 event 	struct smtp_message_id *MESSAGE_ID, *BAD_MESSAGE_ID;
 
 
-atom 	struct smtp_from	*from;
-event	struct smtp_from	*BAD_FROM, *FROM;
+atom 	struct smtp_msg_from	*from;
+event	struct smtp_msg_from	*BAD_FROM, *FROM;
 		
-atom	struct smtp_to		*to;
-event	struct smtp_to		*BAD_TO, *TO;
+atom	struct smtp_msg_to	*to;
+event	struct smtp_msg_to	*BAD_TO, *TO;
 
 event	struct smtp_mime_field 	*FLD;
 event	struct smtp_mime_fields	*FLDS;
@@ -127,16 +117,13 @@ atom	void 			*eoh, 	/* end of fields */
 				*eot,	/* end of text */ 
 				*eob, 	/* end of boundary */
 				*eom;	/* end of mseg */
-//wyong, 20231024 
 atom	void			*end;
 
-//wyong, 20231021 
 event 	struct smtp_mime_text_stream	*TEXT, 
 				*TEXT_OK,
 				*BAD_TEXT;
 
 
-//wyong, 20231011
 event 	struct smtp_mime_data	*Body;
 
 event	struct mailmime_list	*MSGS;
@@ -153,7 +140,6 @@ event 	struct smtp_info 	*SMTP_CON;
 event	struct smtp_info	*link;
 event 	void 			*target;
 
-//wyong, 20231022
 //#include "../nel/system.nel"
 #include "attacks.nel"
 
@@ -161,27 +147,27 @@ event 	void 			*target;
 /****************************** ACK  *****************************************/
 ACK	: ack
 	{
-		print("---> ACK : ack \n");
+		print("nel:ACK : ack \n");
 		return 0;
 	}
 	| expn_ack
 	{
-		print("---> ACK : expn_ack \n");
+		print("nel:ACK : expn_ack \n");
 		return 0;
 	}
 	| vrfy_ack 
 	{
-		print("---> ACK : vrfy_ack \n");
+		print("nel:ACK : vrfy_ack \n");
 		return 0;
 	}
 	| ehlo_ack
 	{
-		print("---> ACK : ehlo_ack \n");
+		print("nel:ACK : ehlo_ack \n");
 		return 0;
 	}
 	! BAD_ACK
 	{
-		print("---> ACK ! BAD_ACK \n");
+		print("nel:ACK ! BAD_ACK \n");
 		return 0;
 	}
 	;
@@ -190,13 +176,13 @@ ACK	: ack
 /****************************** HELO *****************************************/
 HELO_REQ_OK: helo_req 
 	{
-		print("--->HELO_REQ_OK: helo_req\n");
+		print("nel:HELO_REQ_OK: helo_req\n");
 		/*$0->permit = SMTP_PERMIT_DROP;*/
 		return 0;
 	}
 	! BAD_HELO_REQ 
 	{
-		print("--->HELO_REQ_OK! BAD_HELO_REQ\n");
+		print("nel:HELO_REQ_OK! BAD_HELO_REQ\n");
 		return 0;
 	}
 	;
@@ -204,13 +190,13 @@ HELO_REQ_OK: helo_req
 /****************************** EHLO *****************************************/
 EHLO_REQ_OK: ehlo_req
 	{
-		print("--->EHLO_REQ_OK: ehlo_req\n");
+		print("nel:EHLO_REQ_OK: ehlo_req\n");
 		/* $0->seen_ehlo = 1;*/
 		return 0;
 	}
 	! BAD_EHLO_REQ 
 	{
-		print("--->EHLO_REQ_OK! BAD_EHLO_REQ\n");
+		print("nel:EHLO_REQ_OK! BAD_EHLO_REQ\n");
 		return 0;
 	}
 	;
@@ -219,12 +205,12 @@ EHLO_REQ_OK: ehlo_req
 /****************************** AUTH *****************************************/
 AUTH_REQ_OK : auth_req 
 	{
-		print("--->AUTH_REQ_OK: auth_req\n");
+		print("nel:AUTH_REQ_OK: auth_req\n");
 		return 0;
 	}
 	! BAD_AUTH_REQ
 	{
-		print("--->AUTH_REQ_OK! BAD_AUTH_REQ\n");
+		print("nel:AUTH_REQ_OK! BAD_AUTH_REQ\n");
 		return 0;
 	}
 	;
@@ -232,12 +218,12 @@ AUTH_REQ_OK : auth_req
 /****************************** USER *****************************************/
 USER_REQ_OK : user_req 
 	{
-		print("---> USER_REQ_OK: user_req\n");
+		print("nel:USER_REQ_OK: user_req\n");
 		return 0;
 	}
 	! BAD_USER_REQ 
 	{
-		print("---> USER_REQ_OK! BAD_USER_REQ\n");
+		print("nel:USER_REQ_OK! BAD_USER_REQ\n");
 		return 0;
 	}
 	;
@@ -246,12 +232,12 @@ USER_REQ_OK : user_req
 /****************************** PASS  *****************************************/
 PASS_REQ_OK : pass_req 
 	{
-		print("--->PASS_REQ_OK: pass_req\n");
+		print("nel:PASS_REQ_OK: pass_req\n");
 		return 0;
 	}
 	! BAD_PASS_REQ
 	{
-		print("--->PASS_REQ_OK ! BAD_PASS_REQ\n");
+		print("nel:PASS_REQ_OK ! BAD_PASS_REQ\n");
 		return 0;
 	}
 	;
@@ -260,14 +246,14 @@ PASS_REQ_OK : pass_req
 /****************************** MAIL *****************************************/
 MAIL_REQ_OK: mail_req 
 	{
-		print("--->MAIL_REQ_OK: MAIL_REQ\n");
-		print("from : %s", $1->addr);
+		print("nel:MAIL_REQ_OK: MAIL_REQ\n");
+		print("nel:from : %s", $1->addr);
 		dump_ip_addr($0->saddr, $0->daddr, $0->sport, $0->dport);
 		return 0;
 	}
 	! BAD_MAIL_REQ
 	{
-		print("--->MAIL_REQ_OK! BAD_MAIL_REQ\n");
+		print("nel:MAIL_REQ_OK! BAD_MAIL_REQ\n");
 		return 0;
 	}
 	;
@@ -276,12 +262,12 @@ MAIL_REQ_OK: mail_req
 /****************************** SEND *****************************************/
 SEND_REQ_OK: send_req 
 	{
-		print("--->SEND_REQ_OK: send_req\n");
+		print("nel:SEND_REQ_OK: send_req\n");
 		return 0;
 	}
 	! BAD_SEND_REQ
 	{
-		print("--->SEND_REQ_OK! BAD_SEND_REQ\n");
+		print("nel:SEND_REQ_OK! BAD_SEND_REQ\n");
 		return 0;
 	}
 	;
@@ -291,12 +277,12 @@ SEND_REQ_OK: send_req
 /****************************** SOML *****************************************/
 SOML_REQ_OK: soml_req 
 	{
-		print("--->SOML_REQ_OK: soml_req\n");
+		print("nel:SOML_REQ_OK: soml_req\n");
 		return 0;
 	}
 	! BAD_SOML_REQ
 	{
-		print("--->SOML_REQ_OK! BAD_SOML_REQ\n");
+		print("nel:SOML_REQ_OK! BAD_SOML_REQ\n");
 		return 0;
 	}
 	;
@@ -306,12 +292,12 @@ SOML_REQ_OK: soml_req
 /****************************** SAML *****************************************/
 SAML_REQ_OK: saml_req
 	{
-		print("--->SAML_REQ_OK: saml_req\n");
+		print("nel:SAML_REQ_OK: saml_req\n");
 		return 0;
 	}
 	! BAD_SAML_REQ
 	{
-		print("--->SAML_REQ_OK! BAD_SAML_REQ\n");
+		print("nel:SAML_REQ_OK! BAD_SAML_REQ\n");
 		return 0;
 	}
 	;
@@ -321,12 +307,12 @@ SAML_REQ_OK: saml_req
 /****************************** VRFY *****************************************/
 VRFY_REQ_OK: vrfy_req 
 	{
-		print("--->VRFY_REQ_OK: vrfy_req\n" );
+		print("nel:VRFY_REQ_OK: vrfy_req\n" );
 		return 0;
 	}
 	! BAD_VRFY_REQ
 	{
-		print("--->VRFY_REQ_OK! BAD_VRFY_REQ\n");
+		print("nel:VRFY_REQ_OK! BAD_VRFY_REQ\n");
 		return 0;
 	}
 	;
@@ -336,13 +322,13 @@ VRFY_REQ_OK: vrfy_req
 /****************************** EXPN *****************************************/
 EXPN_REQ_OK: expn_req 
 	{
-		print("--->EXPN_REQ_OK: expn_req\n");
+		print("nel:EXPN_REQ_OK: expn_req\n");
 		/*$0->permit = SMTP_PERMIT_DROP;*/
 		return 0;
 	}
 	! BAD_EXPN_REQ
 	{
-		print("--->EXPN_REQ_OK! BAD_EXPN_REQ\n");
+		print("nel:EXPN_REQ_OK! BAD_EXPN_REQ\n");
 		return 0;
 	}
 	;
@@ -352,12 +338,12 @@ EXPN_REQ_OK: expn_req
 /****************************** RSET *****************************************/
 RSET_REQ_OK: rset_req 
 	{
-		print("--->RSET_REQ_OK: rset_req\n");
+		print("nel:RSET_REQ_OK: rset_req\n");
 		return 0;
 	}
 	! BAD_RSET_REQ
 	{
-		print("--->RSET_REQ_OK! BAD_RSET_REQ\n");
+		print("nel:RSET_REQ_OK! BAD_RSET_REQ\n");
 		return 0;
 	}
 	;
@@ -367,12 +353,12 @@ RSET_REQ_OK: rset_req
 /****************************** RCPT *****************************************/
 RCPT_REQ_OK: rcpt_req 
 	{
-		print("--->RCPT_REQ_OK: RCPT_REQ\n");
+		print("nel:RCPT_REQ_OK: RCPT_REQ\n");
 		return 0;
 	}
 	! BAD_RCPT_REQ
 	{
-		print("--->RCPT_REQ_OK! BAD_RCPT_REQ\n");
+		print("nel:RCPT_REQ_OK! BAD_RCPT_REQ\n");
 		return 0;
 	}
 	;
@@ -382,12 +368,12 @@ RCPT_REQ_OK: rcpt_req
 /****************************** DATA *****************************************/
 DATA_REQ_OK: data_req 
 	{
-		print("--->DATA_REQ_OK: data_req\n");
+		print("nel:DATA_REQ_OK: data_req\n");
 		return 0;
 	}
 	! BAD_DATA_REQ
 	{
-		print("--->DATA_REQ_OK! BAD_DATA_REQ\n");
+		print("nel:DATA_REQ_OK! BAD_DATA_REQ\n");
 		return 0;
 	}
 	;
@@ -397,12 +383,12 @@ DATA_REQ_OK: data_req
 /****************************** QUIT *****************************************/
 QUIT_REQ_OK: quit_req 
 	{
-		print("--->QUIT_REQ_OK: quit_req\n");
+		print("nel:QUIT_REQ_OK: quit_req\n");
 		return 0;
 	}
 	! BAD_QUIT_REQ
 	{
-		print("--->QUIT_REQ_OK! BAD_QUIT_REQ\n");
+		print("nel:QUIT_REQ_OK! BAD_QUIT_REQ\n");
 		return 0;
 	}
 	;
@@ -410,24 +396,24 @@ QUIT_REQ_OK: quit_req
 
 TO	: to 
 	{
-		print("TO : to\n");
+		print("nel:TO : to\n");
 		return $1;
 	}
 	! BAD_TO
 	{
-		print("TO ! BAD_TO\n");
+		print("nel:TO ! BAD_TO\n");
 		return 0;
 	}
 	;
 
 FROM	: from
 	{
-		print("FROM : from\n");
+		print("nel:FROM : from\n");
 		return $1;
 	}
 	! BAD_FROM
 	{
-		print("FROM ! BAD_FROM\n");
+		print("nel:FROM ! BAD_FROM\n");
 		return 0;
 	}
 	;
@@ -435,24 +421,24 @@ FROM	: from
 
 CONTENT_DISPOSITION: content_disposition 
 	{
-		print("CONTENT_DISPOSITION: content_disposition\n");
+		print("nel:CONTENT_DISPOSITION: content_disposition\n");
 		return $1;
 	}
 	! BAD_CONTENT_DISPOSITION
 	{
-		print("CONTENT_DISPOSITION ! BAD_CONTENT_DISPOSITION\n");
+		print("nel:CONTENT_DISPOSITION ! BAD_CONTENT_DISPOSITION\n");
 		return 0;
 	}
 	;
 
 CONTENT_TYPE: content_type 
 	{
-		print("CONTENT_TYPE: content_type\n");
+		print("nel:CONTENT_TYPE: content_type\n");
 		return $1;
 	}
 	! BAD_CONTENT_TYPE
 	{
-		print("CONTENT_TYPE! BAD_CONTENT_TYPE\n");
+		print("nel:CONTENT_TYPE! BAD_CONTENT_TYPE\n");
 		return 0;
 	}
 	;
@@ -460,12 +446,12 @@ CONTENT_TYPE: content_type
 
 MESSAGE_ID: message_id 
 	{
-		print("MESSAGE_ID: message_id\n");
+		print("nel:MESSAGE_ID: message_id\n");
 		return $1;
 	}
 	! BAD_MESSAGE_ID
 	{
-		print("MESSAGE_ID ! BAD_MESSAGE_ID\n");
+		print("nel:MESSAGE_ID ! BAD_MESSAGE_ID\n");
 		return 0;
 	}
 	;
@@ -474,30 +460,30 @@ MESSAGE_ID: message_id
 /******************************* MSG *****************************************/
 FLD	: CONTENT_TYPE
 	{
-		print("--->FLD : CONTENT_TYPE\n");
+		print("nel:FLD : CONTENT_TYPE\n");
 		return smtp_mime_field_new(SMTP_MIME_FIELD_TYPE, $1);
 	}
 
 	| CONTENT_DISPOSITION
 	{
-		print("--->FLD : CONTENT_DISPOSITION\n");
+		print("nel:FLD : CONTENT_DISPOSITION\n");
 		return smtp_mime_field_new(SMTP_MIME_FIELD_DISPOSITION, $1);
 	}
 
 	| FROM
 	{
-		print("--->FLD : FROM\n ");
+		print("nel:FLD : FROM\n");
 		return smtp_mime_field_new(SMTP_FIELD_FROM, $1);
 	}
 
 	| MESSAGE_ID
 	{
-		print("--->FLD : MESSAGE_ID \n");
+		print("nel:FLD : MESSAGE_ID\n");
 		return smtp_mime_field_new(SMTP_FIELD_MESSAGE_ID, $1);
 	}
 	| TO
 	{
-		print("--->FLD : TO \n");
+		print("nel:FLD : TO\n");
 		return smtp_mime_field_new(SMTP_FIELD_TO, $1);
 	}
 	;
@@ -505,7 +491,7 @@ FLD	: CONTENT_TYPE
 
 FLDS	: FLD
 	{
-		print("--->FLDS: FLD\n" );
+		print("nel:FLDS: FLD\n" );
 		struct smtp_mime_fields * flds=smtp_mime_fields_new_empty();
 		if (flds != NULL ) {
 			smtp_mime_fields_add(flds, $1);
@@ -516,7 +502,7 @@ FLDS	: FLD
 	}
 	| FLDS FLD
 	{
-		print("--->FLDS : FLDS FLD\n" );
+		print("nel:FLDS : FLDS FLD\n" );
 		if($1 != NULL) {
 			smtp_mime_fields_add($1, $2);
 		}
@@ -526,7 +512,7 @@ FLDS	: FLD
 
 Header	: FLDS eoh
 	{
-		print("Header : FLDS eoh\n ");
+		print("nel:Header : FLDS eoh\n");
 		return $1;
 	}
 	;
@@ -534,18 +520,18 @@ Header	: FLDS eoh
 
 Header_OK: Header
 	{
-		print("Header_OK : Header\n");
+		print("nel:Header_OK : Header\n");
 		return $1;
 	}
 	! BAD_Header
 	{
-		print("Header_OK ! BAD_Header\n");
+		print("nel:Header_OK ! BAD_Header\n");
 	}
 	;
 
 TEXT	: text 
 	{
-		print("--->TEXT: text\n");
+		print("nel:TEXT: text\n");
 		struct smtp_mime_text_stream *s;
 		s = smtp_mime_text_stream_new($1->encoding, $1->encoded );
 		smtp_mime_body_parse ($1->data, $1->length, $1->encoding, s);
@@ -554,7 +540,7 @@ TEXT	: text
 
 	| TEXT text 
 	{
-		print("--->TEXT: TEXT text\n");
+		print("nel:TEXT: TEXT text\n");
 		smtp_mime_body_parse ($2->data, $2->length,  $2->encoding, $1);
 		return $1;
 
@@ -564,19 +550,19 @@ TEXT	: text
 
 TEXT_OK	: TEXT
 	{
-		print("--->TEXT_OK : TEXT\n");
+		print("nel:TEXT_OK : TEXT\n");
 		return $1;
 	}
 	! BAD_TEXT
 	{
-		print("--->TEXT_OK !  BAD_TEXT\n ");
+		print("nel:TEXT_OK !  BAD_TEXT\n ");
 	}
 	;
 
 
 Body	: TEXT_OK eot
 	{
-		print("--->Body : TEXT eot\n");
+		print("nel:Body : TEXT eot\n");
 		struct smtp_mime_data *md;
 		md = smtp_mime_data_new(SMTP_MIME_DATA_TEXT,	//int dt_type, 
 					$1->ts_encoding,	//int dt_encoding,
@@ -584,7 +570,6 @@ Body	: TEXT_OK eot
 					NULL,			//$1->buf,		//const char * dt_data, 
 					$1->ts_length,		//$1->buf_len,		//size_t dt_length, 
 
-					//todo, wyong, 20231021 
 					NULL			//char * dt_filename
 					);
 		return md;
@@ -593,7 +578,7 @@ Body	: TEXT_OK eot
 
 SIG_MSG : Header_OK( get_body_type_from_fields($1) == SMTP_MIME_SINGLE ) Body 
 	{
-		print("--->SIG_MSG: Header_OK Body\n");
+		print("nel:SIG_MSG: Header_OK Body\n");
 		struct mailmime *mm;
 		mm = smtp_mime_new(SMTP_MIME_SINGLE,
 				    NULL,	//const char * mm_mime_start,
@@ -617,7 +602,7 @@ SIG_MSG : Header_OK( get_body_type_from_fields($1) == SMTP_MIME_SINGLE ) Body
 	
 MSGS: 	MSG 
 	{		
-		print("--->MSGS: MSG\n");
+		print("nel:MSGS: MSG\n");
 		struct mailmime_list *ml = mailmime_list_new ();
 		if ( ml != NULL ) {
 			add_to_mailmime_list (ml, $1) ; 
@@ -627,7 +612,7 @@ MSGS: 	MSG
 	}
 	| MSGS MSG 
 	{
-		print("--->MSGS: MSGS MSG\n");
+		print("nel:MSGS: MSGS MSG\n");
 		if ($1 != NULL)  {
 			add_to_mailmime_list($1, $2);
 		}
@@ -638,7 +623,7 @@ MSGS: 	MSG
 
 MLT_MSG	: Header_OK( get_body_type_from_fields($1) == SMTP_MIME_MULTIPLE) Body MSGS eob Body
 	{
-		print("--->MLT_MSG: Header_OK Body MSGS eob Body\n");
+		print("nel:MLT_MSG: Header_OK Body MSGS eob Body\n");
 		struct mailmime *mm;
 		mm = smtp_mime_new (	SMTP_MIME_MULTIPLE,
 					NULL,		//const char * mm_mime_start,
@@ -662,7 +647,7 @@ MLT_MSG	: Header_OK( get_body_type_from_fields($1) == SMTP_MIME_MULTIPLE) Body M
 
 RFC_MSG	: Header_OK( get_body_type_from_fields($1) == SMTP_MIME_MESSAGE) MSG
 	{
-		print("--->RFC_MSG: Header_OK MSG\n");
+		print("nel:RFC_MSG: Header_OK MSG\n");
 		struct mailmime *mm;
 		struct smtp_mime_content_type * ct = get_content_type_from_fields($1);
 		mm = smtp_mime_new( SMTP_MIME_MESSAGE,
@@ -687,17 +672,17 @@ RFC_MSG	: Header_OK( get_body_type_from_fields($1) == SMTP_MIME_MESSAGE) MSG
 
 MSG	: SIG_MSG
 	{
-		print("--->MSG: SIG_MSG\n");
+		print("nel:MSG: SIG_MSG\n");
 		return $1;
 	}
 	| RFC_MSG 
 	{
-		print("--->MSG: RFC_MSG\n");
+		print("nel:MSG: RFC_MSG\n");
 		return $1;
 	}
 	| MLT_MSG
 	{
-		print("--->MSG: MLT_MSG\n");
+		print("nel:MSG: MLT_MSG\n");
 		return $1;
 	}
 	;
@@ -705,7 +690,7 @@ MSG	: SIG_MSG
 
 MESG	: MSG eom
 	{
-		print("--->MESG: MSG eom\n");
+		print("nel:MESG: MSG eom\n");
 		return $1;
 	}
 	;
@@ -713,12 +698,12 @@ MESG	: MSG eom
 
 MESG_OK	: MESG
 	{
-		print("MESG_OK: MESG\n");
+		print("nel:MESG_OK: MESG\n");
 		return $1;
 	}
 	! BAD_MESG
 	{
-		print("MESG_OK! BAD_MESG\n");
+		print("nel:MESG_OK! BAD_MESG\n");
 		return 0;
 	}
 	;
@@ -726,109 +711,109 @@ MESG_OK	: MESG
 /****************************** COMD *****************************************/
 COMD:	EHLO_REQ_OK
 	{
-		print("--->COMD: EHLO\n");
+		print("nel:COMD: EHLO\n");
 		return 0;
 	}
 	| HELO_REQ_OK
 	{
-		print("--->COMD: HELO\n");
+		print("nel:COMD: HELO\n");
 		return 0;
 	}
 	| USER_REQ_OK
 	{
-		print("--->COMD: USER\n");
+		print("nel:COMD: USER\n");
 		return 0;
 	}
 	| PASS_REQ_OK
 	{
-		print("--->COMD: PASS\n");
+		print("nel:COMD: PASS\n");
 		return 0;
 	}
 	| AUTH_REQ_OK
 	{
-		print("--->COMD: AUTH\n");
+		print("nel:COMD: AUTH\n");
 		return 0;
 	}	
 	| MAIL_REQ_OK
 	{
-		print("--->COMD: MAIL\n");
+		print("nel:COMD: MAIL\n");
 		return 0;
 	}
 	| SEND_REQ_OK 
 	{
-		print("--->COMD: SEND\n");
+		print("nel:COMD: SEND\n");
 		return 0;
 	}
 	| SAML_REQ_OK   
 	{	
-		print("--->COMD: SAML\n");
+		print("nel:COMD: SAML\n");
 		return 0;
 	}
 	| SOML_REQ_OK  
 	{
-		print("--->COMD: SOML\n");
+		print("nel:COMD: SOML\n");
 		return 0;
 	}
 	| RCPT_REQ_OK  
 	{
-		print("--->COMD: RCPT\n");
+		print("nel:COMD: RCPT\n");
 		return 0;
 	}	
 	| RSET_REQ_OK  
 	{
-		print("--->COMD: RSET\n");
+		print("nel:COMD: RSET\n");
 		return 0;
 	}	
 	| EXPN_REQ_OK  
 	{
-		print("--->COMD: EXPN\n");
+		print("nel:COMD: EXPN\n");
 		return 0;
 	}	
 	| VRFY_REQ_OK  
 	{
-		print("--->COMD: VRFY\n");
+		print("nel:COMD: VRFY\n");
 		return 0;
 	}	
 	| DATA_REQ_OK  
 	{
-		print("--->COMD: DATA\n");
+		print("nel:COMD: DATA\n");
 		return 0;
 	}
 	| MESG_OK
 	{
-		print("--->COMD: MESG\n");
+		print("nel:COMD: MESG\n");
 		return 0;
 	}
 	| QUIT_REQ_OK  
 	{
-		print("--->COMD: QUIT\n");
+		print("nel:COMD: QUIT\n");
 		return 0;
 	}
 	| ACK {
-		print("--->COMD: ACK \n");
+		print("nel:COMD: ACK \n");
 		return 0;
 	}
 	;
 
 COMDS:	COMD	
 	{
-		print("--->COMDS: COMD\n");
+		print("nel:COMDS: COMD\n");
 		return 0;
 	}
 	| COMDS COMD 
 	{
-		print("--->COMDS:COMDS COMD\n");
+		print("nel:COMDS:COMDS COMD\n");
 		return 0;
 	}
 	! BAD_COMDS
 	{
-		print("--->COMDS! BAD_COMDS\n");
+		print("nel:COMDS! BAD_COMDS\n");
 		return 0;
 	}
 	/*
 	| OTHERS 
 	{
-		print("--->COMDS:OTHERS ");
+		print("nel:COMDS:OTHERS ");
 		return 0;
 	}
 	*/
@@ -837,46 +822,19 @@ COMDS:	COMD
 
 SMTP_CON: COMDS 
 	{
-		print("--->SMTP_CON: COMDS \n");
+		print("nel:SMTP_CON: COMDS \n");
 		return 0;
 	}
 	;
 
 _target	: SMTP_CON 
 	{
-		print("---> Target : SMTP_CON\n");
+		print("nel:Target:SMTP_CON\n");
 		return 0;
 	}
 	;
 
-//wyong, 20231116 
-void nel_smtp_info_init(struct smtp_info *info)
-{
-	print("nel_smtp_info_init");
-	info->user=(void *)new(sizeof(struct smtp_info_user));
-	if(info->user == 0) {
-		print("nel_smtp_info_init: nel_malloc failed");		
-	}
-
-	((struct smtp_info_user *)info->user)->vrfy_cnt = 0;
-	print("nel_smtp_info_init, vrfy_cnt = ", ((struct smtp_info_user *)info->user)->vrfy_cnt);
-
-	return;
-}
-
-void nel_smtp_info_free(struct smtp_info *info)
-{
-	print("nel_smtp_info_free");
-	if(info->user != 0){
-		delete(info->user);
-	}
-}
-
 init {
-	//wyong, 20231116 
-	//register_init(link, nel_smtp_info_init);
-	//register_free(link, nel_smtp_info_free);
-
 	register_free(ehlo_req, smtp_cmd_ehlo_free);
 	register_free(helo_req, smtp_cmd_helo_free); 
 
@@ -902,16 +860,20 @@ init {
 	register_free(vrfy_ack, smtp_ack_vrfy_free);
 	register_free(expn_ack, smtp_ack_expn_free); 
 
-	//todo, wyong, 20231116 
 	//register_free(Header_OK, smtp_mime_fields_free);
 	//register_free(text, smtp_mime_text_free);
 	//register_free(TEXT, smtp_mime_text_stream_free); 
 	//register_free(Body, smtp_mime_data_free); 
 
 	//register_free(MSG, smtp_mime_free);
-	//register_free(MESG, smtp_mime_free);
+	register_free(MESG, smtp_mime_free);
 	
 }
+
+fini{
+
+}
+
 
 main{
 	//commands
@@ -960,3 +922,4 @@ main{
 	info_id=idof("link");
 
 }
+

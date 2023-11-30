@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +8,7 @@
 #include "turn.h"
 
 extern int var_disable_turn_cmd;
+
 struct smtp_cmd_turn *
 smtp_cmd_turn_new (void)
 {
@@ -43,7 +43,7 @@ smtp_turn_parse (char *message, size_t length, size_t * index,
 
 
 	/* if nel configureable variable var_disable_turn_cmd 
-	   is set to 0, don't allow the command pass through. wyong */
+	   is set to 0, don't allow the command pass through. */
 	if (var_disable_turn_cmd == 1) {
 		res = SMTP_ERROR_POLICY;
 		goto err;

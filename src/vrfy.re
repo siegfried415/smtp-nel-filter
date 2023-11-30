@@ -5,8 +5,8 @@
 #include <unistd.h>
 
 #include "mem_pool.h"
-
 #include "smtp.h"
+#include "mime.h" 
 #include "address.h"
 #include "vrfy.h"
 #include "command.h"
@@ -18,7 +18,7 @@ int vrfy_id;
 int ack_vrfy_id;
 #endif
 
-extern max_smtp_ack_len;
+extern int max_smtp_ack_len;
 ObjPool_t smtp_cmd_vrfy_pool;
 ObjPool_t smtp_ack_vrfy_pool;
 
@@ -35,10 +35,6 @@ smtp_cmd_vrfy_init (
 			 sizeof (struct smtp_ack_vrfy), SMTP_MEM_STACK_DEPTH);
 	create_mem_pool (&smtp_cmd_vrfy_pool,
 			 sizeof (struct smtp_cmd_vrfy), SMTP_MEM_STACK_DEPTH);
-#ifdef USE_NEL
-	//nel_func_name_call(eng, (char *)&ack_vrfy_id, "nel_id_of", "vrfy_ack");
-	//nel_func_name_call(eng, (char *)&vrfy_id, "nel_id_of", "vrfy_req");
-#endif
 }
 
 #define YYCURSOR  p1
@@ -80,15 +76,7 @@ smtp_ack_vrfy_new (int len, int code, struct smtp_mailbox *mailbox)
 	DEBUG_SMTP (SMTP_MEM, "smtp_ack_vrfy_new: pointer=%p, elm=%p\n",
 		    &smtp_ack_vrfy_pool, (void *) ack);
 
-	/* the total length of this ack line */
-
-	DEBUG_SMTP (SMTP_DBG, "\n");
-	//ack->event_type = SMTP_ACK_VRFY;
-	//ack->nel_id = ack_vrfy_id;
-
-
 #ifdef USE_NEL
-	//ack->count = 0;
 	NEL_REF_INIT (ack);
 #endif
 
@@ -111,8 +99,7 @@ smtp_ack_vrfy_new (int len, int code, struct smtp_mailbox *mailbox)
 
 
 int
-smtp_ack_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp)
+smtp_ack_vrfy_parse ( struct smtp_info *psmtp)
 {
 	struct smtp_ack_vrfy *ack = NULL;
 	struct smtp_mailbox *mailbox = NULL;
@@ -126,14 +113,6 @@ smtp_ack_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	size_t cur_token = 0;
 
 	DEBUG_SMTP (SMTP_DBG, "smtp_ack_vrfy_parse... \n");
-
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	if (len > max_smtp_ack_len) {
-		DEBUG_SMTP (SMTP_DBG, "smtp server ack line is too long\n");
-		res = SMTP_ERROR_PROTO;
-		goto err;
-	}
-#endif
 	p1 = buf;
 	p2 = buf + len;
 
@@ -215,10 +194,7 @@ smtp_ack_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 		goto err;
 	}
 
-	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %d\n", len, cur_token);
-	//psmtp->svr_data += cur_token;
-	//psmtp->svr_data_len -= cur_token;
-
+	DEBUG_SMTP (SMTP_DBG, "len = %d,  cur_token = %lu\n", len, cur_token);
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -263,16 +239,12 @@ smtp_cmd_vrfy_new (int len, char *user_name, char *mail_box)
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_vrfy_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_vrfy_pool, (void *) vrfy);
 
-	//vrfy->event_type = SMTP_CMD_VRFY;
-	//vrfy->nel_id = vrfy_id;
-
 #ifdef USE_NEL
-	//vrfy->count = 0;
 	NEL_REF_INIT (vrfy);
 #endif
 
 	vrfy->len = len;
-	if (user_name) {	//bugfix, wyong, 2005.11.8 
+	if (user_name) {
 		vrfy->user_name = user_name;
 		vrfy->user_name_len = strlen (user_name);
 	}
@@ -280,7 +252,7 @@ smtp_cmd_vrfy_new (int len, char *user_name, char *mail_box)
 		vrfy->user_name = NULL;
 		vrfy->user_name_len = 0;
 	}
-	if (mail_box) {		//bugfix, wyong, 2005.11.8
+	if (mail_box) {	
 		vrfy->mail_box = mail_box;
 		vrfy->mail_box_len = strlen (mail_box);
 	}
@@ -294,8 +266,7 @@ smtp_cmd_vrfy_new (int len, char *user_name, char *mail_box)
 
 
 int
-smtp_cmd_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp, char *message, size_t length, size_t * index)
+smtp_cmd_vrfy_parse ( struct smtp_info *psmtp, char *message, size_t length, size_t * index)
 {
 	struct smtp_cmd_vrfy *vrfy = NULL;
 	char *display_name = NULL, *angle_addr = NULL;
@@ -305,31 +276,17 @@ smtp_cmd_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_vrfy_parse\n");
 
 	/* if nel configureable variable var_disable_vrfy_cmd is set to 1, 
-	   don't allow the command pass through, wyong, 2005.9.26  */
-	//if (var_disable_vrfy_cmd == 1) {
-	//      r = reply_to_client(ptcp, "550 VRFY not implemented.\r\n");
-	//      if (r != SMTP_NO_ERROR) {
-	//              res = r;
-	//              goto err;
-	//      }
-	//      res = SMTP_ERROR_POLICY;
-	//      goto err;
-	//}
+	don't allow the command pass through. */
+	if (var_disable_vrfy_cmd == 1) {
+		res = SMTP_ERROR_POLICY;
+		goto err;
+	}
 
 	r = smtp_wsp_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 VRFY Syntax error.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
-
 
 
 	/*
@@ -341,7 +298,7 @@ smtp_cmd_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	switch (r) {
 	case SMTP_NO_ERROR:
 		/* do nothing */
-		DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+		DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 		break;
 
 	case SMTP_ERROR_CONTINUE:
@@ -353,20 +310,11 @@ smtp_cmd_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 						 &display_name);
 		if (r != SMTP_NO_ERROR) {
 			res = r;
-			//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-			//      r = reply_to_client(ptcp, "501 VRFY Syntax: parameters error.\r\n");
-			//      if (r != SMTP_NO_ERROR) {
-			//              res = r;
-			//              goto err;
-			//      }
-			//      res = SMTP_ERROR_PARSE;
-			////}
 			goto err;
 		}
-		DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+		DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 		break;
 	default:
-		DEBUG_SMTP (SMTP_DBG, "\n");
 		res = r;
 		goto err;
 	}
@@ -376,14 +324,6 @@ smtp_cmd_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 VRFY Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto free;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto free;
 	}
 
@@ -407,31 +347,20 @@ smtp_cmd_vrfy_parse ( /*struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 VRFY cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
 
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
-	DEBUG_SMTP (SMTP_DBG, "cur_token = %d\n", cur_token);
+	DEBUG_SMTP (SMTP_DBG, "cur_token = %lu\n", cur_token);
 	*index = cur_token;
 	psmtp->last_cli_event_type = SMTP_CMD_VRFY;
-
-
-	//wyong, 20231003 
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
 
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {

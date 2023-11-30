@@ -1,12 +1,5 @@
-/*
- * $Id: command.re,v 1.13 2005/12/06 10:32:14 xiay Exp $
- */
-
-
 #include "mem_pool.h"
 #include "mmapstring.h"
-
-
 #include "smtp.h"
 #include "command.h"
 #include "mime.h"
@@ -16,10 +9,6 @@
 #include "ehlo.h"
 #include "user.h"
 #include "password.h"
-#include "mail-from.h"
-#include "send-from.h"
-#include "soml-from.h"
-#include "saml-from.h"
 #include "rcpt-to.h"
 #include "data.h"
 #include "quit.h"
@@ -28,6 +17,10 @@
 #include "vrfy.h"
 #include "turn.h"
 #include "message.h"
+#include "mail-from.h"
+#include "send-from.h"
+#include "soml-from.h"
+#include "saml-from.h"
 
 
 #ifdef USE_NEL
@@ -37,7 +30,7 @@ extern struct nel_eng *eng;
 #endif
 
 extern ObjPool_t smtp_ack_pool;
-extern short max_smtp_ack_len;
+extern int max_smtp_ack_len;
 
 
 #define YYCURSOR  p1
@@ -65,10 +58,9 @@ smtp_ack_free (struct smtp_ack *ack)
 }
 
 struct smtp_ack *
-smtp_ack_new (int len, int code /*, int str_len, char *str */ )
+smtp_ack_new (int len, int code )
 {
 	struct smtp_ack *ack;
-
 	ack = (struct smtp_ack *) alloc_mem (&smtp_ack_pool);
 	if (!ack) {
 		return NULL;
@@ -76,18 +68,11 @@ smtp_ack_new (int len, int code /*, int str_len, char *str */ )
 	DEBUG_SMTP (SMTP_MEM, "smtp_ack_new: pointer=%p, elm=%p\n",
 		    &smtp_ack_pool, ack);
 
-	//ack->event_type = SMTP_ACK;
-	//ack->nel_id = ack_id;
-
 #ifdef USE_NEL
-	//ack->count = 0;
 	NEL_REF_INIT (ack);
 #endif
 	ack->len = len;		/* the total length of this ack line */
 	ack->code = code;
-
-	//ack->str_len = str_len;
-	//ack->str = str
 
 	return ack;
 }
@@ -100,7 +85,7 @@ parse_smtp_ack (struct smtp_info *psmtp)
 	int r, res;
 	char *buf = psmtp->svr_data;
 	int len = psmtp->svr_data_len;
-	int cur_token = 0;
+	size_t cur_token = 0;
 
 	DEBUG_SMTP (SMTP_DBG, "parse_smtp_ack... \n");
 
@@ -183,14 +168,6 @@ parse_smtp_ack (struct smtp_info *psmtp)
 		break;
 	}
 
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	DEBUG_SMTP (SMTP_DBG, "\n");
-	if (len > max_smtp_ack_len) {
-		DEBUG_SMTP (SMTP_DBG, "smtp server ack line is too long\n");
-		return SMTP_ERROR_PROTO;
-	}
-#endif
-
 	p1 = buf;
 	p2 = buf + len;
 
@@ -199,13 +176,6 @@ parse_smtp_ack (struct smtp_info *psmtp)
 	digit{3,3}
 	{
 		DEBUG_SMTP(SMTP_DBG, "\n");
-
-		//xiayu Fixme
-		//str = (char *)alloc_mem (&smtp_string_pool);
-		//str_len = p1 - p2  + len - 2; 
-		//memcpy(str, buf+4, str_len);
-		//str[str_len] = '\0';
-
 		ack = smtp_ack_new(len, atoi(buf) /*, str_len, str */);
 		if (!ack) {
 			res = SMTP_ERROR_MEMORY;
@@ -222,7 +192,6 @@ parse_smtp_ack (struct smtp_info *psmtp)
 #endif 
 		/* Fixme: how to deal with the client? */
 		if (psmtp->permit & SMTP_PERMIT_DENY) {
-			//smtp_close_connection(ptcp, psmtp);
 			res = SMTP_ERROR_POLICY;
 			goto err;
 		} else if (psmtp->permit & SMTP_PERMIT_DROP) {
@@ -232,10 +201,6 @@ parse_smtp_ack (struct smtp_info *psmtp)
 
 		psmtp->svr_data += len;
 		psmtp->svr_data_len = 0;
-		//if (write_to_client(ptcp, psmtp) < 0) {
-		//	res = SMTP_ERROR_TCPAPI_WRITE;
-		//	goto free;
-		//}
 		return SMTP_NO_ERROR;
 	}
 
@@ -259,7 +224,6 @@ parse_smtp_ack (struct smtp_info *psmtp)
 #endif 
 		/* Fixme: how to deal with the client? */
 		if (psmtp->permit & SMTP_PERMIT_DENY) {
-			//smtp_close_connection(ptcp, psmtp);
 			res = SMTP_ERROR_POLICY;
 			goto err;
 		} else if (psmtp->permit & SMTP_PERMIT_DROP) {
@@ -269,16 +233,11 @@ parse_smtp_ack (struct smtp_info *psmtp)
 
 		psmtp->svr_data += 5;
 		psmtp->svr_data_len = 0;
-		//if (write_to_client(ptcp, psmtp) < 0) {
-		//	res = SMTP_ERROR_TCPAPI_WRITE;
-		//	goto free;
-		//}
 		return SMTP_NO_ERROR;
 	}
 
 	any 
 	{
-		//psmtp->curr_svr_event = NULL;
 		DEBUG_SMTP(SMTP_DBG, "server response unrecognizable data %s\n", buf);
 		res = SMTP_ERROR_PARSE;
 		goto err;
@@ -476,24 +435,12 @@ parse_smtp_command (struct smtp_info *psmtp)
 	"\r\n"
 	{
 		DEBUG_SMTP(SMTP_DBG, "parse_smtp_command: blank line\n");
-		//psmtp->curr_event_type = SMTP_EVENT_UNCERTAIN;
-		//r = reply_to_client(ptcp, "500 Command unrecognized\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//	res = r;
-		//	goto err;
-		//}
 		res = SMTP_ERROR_PARSE;
 		goto err;
 	}
 	any 
 	{
 		DEBUG_SMTP(SMTP_DBG, "parse_smtp_command: unrecognized\n");
-		//psmtp->curr_event_type = SMTP_EVENT_UNCERTAIN;
-		//r = reply_to_client(ptcp, "500 Command unrecognized\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//	res = r;
-		//	goto err;
-		//}
 		res = SMTP_ERROR_PARSE;
 		goto err;
 	}
@@ -502,18 +449,12 @@ parse_smtp_command (struct smtp_info *psmtp)
 
       succ:
 
-	DEBUG_SMTP (SMTP_DBG, "length = %d\n", length);
+	DEBUG_SMTP (SMTP_DBG, "length = %lu\n", length);
 	DEBUG_SMTP (SMTP_DBG, "cli_data[%d] = %s\n", psmtp->cli_data_len,
 		    psmtp->cli_data);
 
-	//wyong, 20231003
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
-	//r = write_to_server(ptcp, psmtp);
-
 	sync_client_data (psmtp, cur_token);
 	if (r < 0) {
-		//      res = SMTP_ERROR_TCPAPI_WRITE;
 		goto err;
 	}
 

@@ -1,8 +1,3 @@
-/*
- * mail_invalid_size.nel
- * $Id: mail_invalid_size.nel,v 1.2 2005/11/03 15:58:15 wyong Exp $
- */
-
 static int nid = 25;
 static char des[] = "the keyword SIZE in MAIL FROM is not declared in previous ACK of EHLO.";
 

@@ -13,7 +13,6 @@
 
 #include <sys/types.h>
 #include <pcap.h>
-//#include "tcp.h"
 struct tcp_stream;
 
 enum

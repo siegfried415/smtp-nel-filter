@@ -1,7 +1,3 @@
-/*
- * $Id: charconv.c,v 1.3 2005/12/07 09:44:31 wyong Exp $
- */
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -109,7 +105,6 @@ charconv (const char *tocode, const char *fromcode,
 		res = MAIL_CHARCONV_ERROR_MEMORY;
 		goto close_iconv;
 	}
-	DEBUG_SMTP (SMTP_MEM_1, "charconv: MALLOC pointer=%p\n", out);
 
 	pout = out;
 	old_out_size = out_size;
@@ -128,8 +123,6 @@ charconv (const char *tocode, const char *fromcode,
 	pout = realloc (out, count + 1);
 	if (pout != NULL)
 		out = pout;
-	DEBUG_SMTP (SMTP_MEM_1, "charconv: REALLOC-FREE pointer=%p\n", out);
-	DEBUG_SMTP (SMTP_MEM_1, "charconv: REALLOC-ALLOC pointer=%p\n", pout);
 
 	*result = out;
 
@@ -137,7 +130,6 @@ charconv (const char *tocode, const char *fromcode,
 
       free:
 	free (out);
-	DEBUG_SMTP (SMTP_MEM_1, "charconv: FREE pointer=%p\n", out);
       close_iconv:
 	iconv_close (conv);
       err:

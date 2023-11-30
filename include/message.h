@@ -36,16 +36,19 @@ struct smtp_part
 	int body_type;
 	struct smtp_mime_content_type *content_type;
 	int encode_type;
-	char *boundary;		/* wyong, 2005.8.16 */
-	struct trieobj *boundary_tree;	/* wyong, 2005.8.26 */
-	int flag;		/* xiayu 2005.11.23 for err pop and re-push back */
+	char *boundary;	
+	//struct trieobj *boundary_tree;	
+	int flag;		
 };
 
 #define SMTP_MSG_STACK_MAX_DEPTH	16
 
-int smtp_mime_part_parse (const char *message, size_t length,
-			  size_t * index,
-			  int encoding, char **result, size_t * result_len);
+int smtp_mime_part_parse(char *message, 
+			size_t length,
+			size_t * index,
+			int encoding,
+			char **result, 
+			size_t * result_len);
 /*
   smtp_message_parse will parse the given message
   
@@ -60,7 +63,7 @@ int smtp_mime_part_parse (const char *message, size_t length,
   @return SMTP_NO_ERROR on success, SMTP_ERROR_XXX on error
 */
 
-//int smtp_message_parse(const char * message, size_t length,
+//int smtp_message_parse(char * message, size_t length,
 //                        size_t * index,
 //                        struct smtp_message ** result);
 
@@ -81,5 +84,23 @@ int parse_smtp_message (struct smtp_info *psmtp);
 //struct mailmime * smtp_mime_multiple_new(const char * type);
 
 int smtp_ack_msg_parse (struct smtp_info *psmtp);
+
+static int
+smtp_mime_multipart_close_parse(char *message,
+                                size_t length,
+                                size_t * index);
+
+
+static int
+smtp_mime_body_part_dash2_boundary_parse(char *message,
+                                        size_t length,
+                                        size_t * index,
+                                        char *boundary, //struct trieobj *boundary_tree, 
+                                        char **result,
+                                        size_t * result_size) ;
+
+
+int
+pop_part_stack (struct smtp_info *psmtp); 
 
 #endif

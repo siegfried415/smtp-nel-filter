@@ -12,6 +12,9 @@
 #include "address.h"
 #include "ehlo.h"
 #include "command.h"
+#include "helo.h" 
+#include "rcpt-to.h"
+#include "mail-from.h" 
 
 #ifdef USE_NEL
 #include "engine.h"
@@ -21,11 +24,10 @@ int ehlo_id;
 int ack_ehlo_id;
 #endif
 
-extern max_smtp_ack_multiline_count;
-extern max_smtp_ack_len;
+extern int max_smtp_ack_multiline_count;
+extern int max_smtp_ack_len;
 
 
-/* add var_disable_ehlo_cmd for debug purpose, wyong, 2005.9.29  */
 int var_disable_ehlo_cmd = 0;
 ObjPool_t smtp_cmd_ehlo_pool;
 //ObjPool_t smtp_ack_ehlo_pool;
@@ -59,7 +61,7 @@ space	= [\040];
 
 int
 smtp_ack_ehlo_param_auth_parse (struct smtp_info *psmtp, char *message,
-				int length, int *index)
+				int length, size_t *index)
 {
 	char *p1, *p2, *p3;
 	int is_finished = 0;
@@ -146,10 +148,8 @@ smtp_ack_ehlo_param_auth_parse (struct smtp_info *psmtp, char *message,
 		print +
 		{
 			DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_auth_parse: any other auth keyword in ehlo ack\n");
-			//xiayu 2005.11.17 edited, 'print +' use to be 'any'
 			//Fixme: we temperory skip unrecognized auth keywords
 			DEBUG_SMTP(SMTP_DBG, "p1: %s\n", p1);
-			//return SMTP_ERROR_PARSE;
 			continue;
 		}
 		*/
@@ -168,11 +168,11 @@ smtp_ack_ehlo_param_auth_parse (struct smtp_info *psmtp, char *message,
 
 int
 smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
-			   int *index)
+			   size_t *index)
 {
 	int r, offset;
 	char *p1, *p2, *p3;
-	int cur_token = *index;
+	size_t cur_token = *index;
 
 	DEBUG_SMTP (SMTP_DBG, "smtp_ack_ehlo_param_parse... \n");
 
@@ -192,7 +192,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[7][Bb][Ii][Tt]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: 7BIT\n");
 		cur_token += strlen("7BIT");
 		psmtp->cmd_allow[SMTP_ALLOW_7BIT] = 1;
@@ -204,7 +203,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Aa][Tt][Rr][Nn]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: ATRN\n");
 		cur_token += strlen("ATRN");
 		psmtp->cmd_allow[SMTP_ALLOW_ATRN] = 1;
@@ -220,7 +218,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: AUTH\n");
 		cur_token += strlen("AUTH");
 
-		//r = smtp_ack_ehlo_param_auth_parse(psmtp, &p1, p2);
 		r = smtp_ack_ehlo_param_auth_parse(psmtp, message, length, &cur_token);
 		if (r != SMTP_NO_ERROR)
 			return r;
@@ -317,7 +314,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Oo][Nn][Ee][Xx]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: ONEX\n");
 		cur_token += strlen("ONEX");
 		psmtp->cmd_allow[SMTP_ALLOW_ONEX] = 1;
@@ -367,7 +363,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Rr][Ss][Ee][Tt]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: RSET\n");
 		cur_token += strlen("RSET");
 		psmtp->cmd_allow[SMTP_ALLOW_RSET] = 1;
@@ -379,7 +374,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Ss][Aa][Mm][Ll]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: SAML\n");
 		cur_token += strlen("SAML");
 		psmtp->cmd_allow[SMTP_ALLOW_SAML] = 1;
@@ -392,7 +386,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Ss][Ee][Nn][Dd]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: SEND\n");
 		cur_token += strlen("SEND");
 		psmtp->cmd_allow[SMTP_ALLOW_SEND] = 1;
@@ -419,7 +412,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Ss][Oo][Mm][Ll]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: SOML\n");
 		cur_token += strlen("SOML");
 		psmtp->cmd_allow[SMTP_ALLOW_SOML] = 1;
@@ -448,7 +440,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Tt][Ii][Mm][Ee]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: TIME\n");
 		cur_token += strlen("TIME");
 		psmtp->cmd_allow[SMTP_ALLOW_TIME] = 1;
@@ -461,7 +452,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Tt][Ll][Ss]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: TLS\n");
 		cur_token += strlen("TLS");
 		psmtp->cmd_allow[SMTP_ALLOW_TLS] = 1;
@@ -490,7 +480,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Vv][Rr][Ff][Yy]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: VRFY\n");
 		cur_token += strlen("VRFY");
 		psmtp->cmd_allow[SMTP_ALLOW_VRFY] = 1;
@@ -503,7 +492,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][-][Ee][Xx][Pp][Ss]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: X-EXPS\n");
 		cur_token += strlen("X-EXPS");
 		psmtp->cmd_allow[SMTP_ALLOW_X_EXPS] = 1;
@@ -517,7 +505,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][-][Ll][Ii][Nn][Kk][2][Ss][Tt][Aa][Tt][Ee]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: X-LINK2STATE\n");
 		cur_token += strlen("X-LINK2STATE");
 		psmtp->cmd_allow[SMTP_ALLOW_X_LINK2STATE] = 1;
@@ -530,7 +517,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][-][Rr][Cc][Pp][Tt][Ll][Ii][Mm][Ii][Tt]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: X-RCPTLIMIT\n");
 		cur_token += strlen("X-RCPTLIMIT");
 		psmtp->cmd_allow[SMTP_ALLOW_X_RCPTLIMIT] = 1;
@@ -543,7 +529,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][-][Tt][Uu][Rr][Nn][Mm][Ee]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: X-TURNME\n");
 		cur_token += strlen("X-TURNME");
 		psmtp->cmd_allow[SMTP_ALLOW_X_TURNME] = 1;
@@ -564,7 +549,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Aa][Uu][Dd]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XAUD\n");
 		cur_token += strlen("XAUD");
 		psmtp->cmd_allow[SMTP_ALLOW_XAUD] = 1;
@@ -577,7 +561,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Dd][Ss][Nn]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XDSN\n");
 		cur_token += strlen("XDSN");
 		psmtp->cmd_allow[SMTP_ALLOW_XDSN] = 1;
@@ -590,7 +573,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Ee][Xx][Cc][Hh] "50"
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XEXCH50\n");
 		cur_token += strlen("XEXCH50");
 		psmtp->cmd_allow[SMTP_ALLOW_XEXCH50] = 1;
@@ -603,7 +585,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Gg][Ee][Nn]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XGEN\n");
 		cur_token += strlen("XGEN");
 		psmtp->cmd_allow[SMTP_ALLOW_XGEN] = 1;
@@ -628,7 +609,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Oo][Nn][Ee]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XONE\n");
 		cur_token += strlen("XONE");
 		psmtp->cmd_allow[SMTP_ALLOW_XONE] = 1;
@@ -641,7 +621,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Qq][Uu][Ee]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XQUE\n");
 		cur_token += strlen("XQUE");
 		psmtp->cmd_allow[SMTP_ALLOW_XQUE] = 1;
@@ -654,7 +633,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Rr][Ee][Mm][Oo][Tt][Ee][Qq][Uu][Ee][Uu][Ee]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XREMOTEQUEUE\n");
 		cur_token += strlen("XREMOTEQUEUE");
 		psmtp->cmd_allow[SMTP_ALLOW_XREMOTEQUEUE] = 1;
@@ -667,7 +645,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Ss][Tt][Aa]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XSTA\n");
 		cur_token += strlen("XSTA");
 		psmtp->cmd_allow[SMTP_ALLOW_XSTA] = 1;
@@ -680,7 +657,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Tt][Rr][Nn]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XTRN\n");
 		cur_token += strlen("XTRN");
 		psmtp->cmd_allow[SMTP_ALLOW_XTRN] = 1;
@@ -693,7 +669,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Uu][Ss][Rr]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XUSR\n");
 		cur_token += strlen("XUSR");
 		psmtp->cmd_allow[SMTP_ALLOW_XUSR] = 1;
@@ -706,7 +681,6 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 	[Xx][Vv][Rr][Bb]
 	{
-		//xiayu 2005.11.17 added
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: XVRB\n");
 		cur_token += strlen("XVRB");
 		psmtp->cmd_allow[SMTP_ALLOW_XVRB] = 1;
@@ -721,22 +695,8 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 	{
 		DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_param_parse: any\n");
 		DEBUG_SMTP(SMTP_DBG, "p1 = %s\n", p1);
-		//r = smtp_wsp_domain_parse(p1, p2-p1, &offset, &(psmtp->domain));	
-		//switch (r) {
-		//case SMTP_NO_ERROR:
-		//	p1 += offset;
-		//	DEBUG_SMTP(SMTP_DBG, "SMTP server domain = %s\n", psmtp->domain);
-		//	break;
-		//case SMTP_ERROR_PARSE:
-		//	DEBUG_SMTP(SMTP_DBG, "SMTP server domain parse error\n");
-			//do nothing
-		//	break;
-		//default:
-		//	return r;
-		//}
 
-
-		/* xiayu Fixme skip unknown param keywords */
+		/* Fixme: skip unknown param keywords */
 		r = smtp_str_crlf_parse(message, length, &cur_token);
 		if (r != SMTP_NO_ERROR)
 			return SMTP_ERROR_PARSE;
@@ -753,15 +713,12 @@ smtp_ack_ehlo_param_parse (struct smtp_info *psmtp, char *message, int length,
 
 
 int
-smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp)
+smtp_ack_ehlo_parse (struct smtp_info *psmtp)
 {
 	struct smtp_ack *ack = NULL;
 	int multiline_count;
-	int code, cur_token;
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	int last_crlf;
-#endif
+	int code; 
+	size_t cur_token;
 	int r, res;
 
 	char *buf = psmtp->svr_data;
@@ -778,9 +735,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	multiline_count = 0;
 	cur_token = 0;
 
-#if 0				//xiayu 2005.11.22 let engine do the checking
-	last_crlf = 0;
-#endif
 
 	while (1) {
 
@@ -798,13 +752,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			
 			if (0 == code) {
 				code = 250;
-				//r = smtp_domain_parse(buf, len, &cur_token, &psmtp->domain);	
-				//if (r != SMTP_NO_ERROR) {
-				//	res = r;
-				//	goto free;
-				//}
-				//DEBUG_SMTP(SMTP_DBG, "psmtp->domain: %s\n", psmtp->domain);
-
 				r = smtp_str_crlf_parse(buf, len, &cur_token);
 				if (r != SMTP_NO_ERROR) {
 					res = SMTP_ERROR_PARSE;
@@ -826,17 +773,7 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 				}
 			}
 
-			DEBUG_SMTP(SMTP_DBG, "\n");
 			DEBUG_SMTP(SMTP_DBG, "p1: %s\n", p1);
-#if 0 //xiayu 2005.11.22 let engine do the checking
-			if (cur_token - last_crlf > max_smtp_ack_len) {
-				DEBUG_SMTP(SMTP_DBG, "smtp server ack line is too long\n");
-				res = SMTP_ERROR_PROTO;
-				goto free;
-			}
-			last_crlf = cur_token;
-#endif
-
 			continue;
 		}
 
@@ -850,7 +787,7 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 				code = 250;
 
 			} else if (250 != code ) {
-				DEBUG_SMTP(SMTP_DBG, "Multi-line ack of EHLO does not has consistent codes: %s\n, psmtp->svr->data");
+				DEBUG_SMTP(SMTP_DBG, "Multi-line ack of EHLO does not has consistent codes: %s\n", psmtp->svr_data);
 				res = SMTP_ERROR_PARSE;
 				goto free;
 			}
@@ -861,15 +798,12 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 				goto free;
 			}
 
-			DEBUG_SMTP(SMTP_DBG, "\n");
-			r = smtp_ack_ehlo_param_parse(psmtp, buf, len, &cur_token);	
-			DEBUG_SMTP(SMTP_DBG, "\n");
+			r = smtp_ack_ehlo_param_parse(psmtp, buf, len, &cur_token);
 			if (r != SMTP_NO_ERROR) {
 				res = r;
 				goto free;
 			}
 
-			//xiayu 2005.12.3 command state dfa
 			if (psmtp->mail_state != SMTP_MAIL_STATE_HELO
 				/*&& psmtp->mail_state != SMTP_MAIL_STATE_RSET*/)
 			{
@@ -887,7 +821,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = 421;
 			cur_token = 3;
 			smtp_helo_reset(psmtp);
-			//goto ack_new;
 			goto crlf;
 		}
 
@@ -897,7 +830,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = 500;
 			cur_token = 3;
 			smtp_helo_reset(psmtp);
-			//goto ack_new;
 			goto crlf;
 		}
 
@@ -907,7 +839,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = 501;
 			cur_token = 3;
 			smtp_helo_reset(psmtp);
-			//goto ack_new;
 			goto crlf;
 		}
 
@@ -917,7 +848,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = 501;
 			cur_token = 3;
 			smtp_helo_reset(psmtp);
-			//goto ack_new;
 			goto crlf;
 		}
 
@@ -927,7 +857,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = 504;
 			cur_token = 3;
 			smtp_helo_reset(psmtp);
-			//goto ack_new;
 			goto crlf;
 		}
 
@@ -937,7 +866,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = 550;
 			cur_token = 3;
 			smtp_helo_reset(psmtp);
-			//goto ack_new;
 			goto crlf;
 		}
 		
@@ -947,11 +875,10 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 			code = atoi(p1-6);
 			cur_token = 3;
 			DEBUG_SMTP(SMTP_DBG, "smtp_ack_ehlo_parse: %d\n", code);
-
 			if (code >= 300) {
 				smtp_helo_reset(psmtp);
 			}
-			//goto ack_new;
+
 			goto crlf;
 		}
 
@@ -995,7 +922,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 	/* Fixme: how to deal with the client? */
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
@@ -1004,13 +930,6 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 		goto err;
 	}
 
-	//wyong, 20231003
-	//psmtp->svr_data += cur_token;
-	//psmtp->svr_data_len -= cur_token;
-	//r = write_to_client(ptcp, psmtp);
-
-	//bugfix, sync_client_data => sync_server_data,  
-	//wyong, 20231016 
 	res = sync_server_data (psmtp, cur_token);
 	if (res < 0) {
 		goto err;
@@ -1036,9 +955,8 @@ smtp_ack_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 void
 smtp_cmd_ehlo_free (struct smtp_cmd_ehlo *ehlo)
 {
-	//xiayu 2005.11.22
 	if (ehlo->host_name) {
-		//xiayu 2005.11.22 debug should use the proper free func
+		//should use the proper free func
 		//smtp_string_free(ehlo->host_name);
 		smtp_atom_free (ehlo->host_name);
 	}
@@ -1058,11 +976,7 @@ smtp_cmd_ehlo_new (int len, char *host_name)
 	DEBUG_SMTP (SMTP_MEM, "smtp_cmd_ehlo_new: pointer=%p, elm=%p\n",
 		    &smtp_cmd_ehlo_pool, (void *) ehlo);
 
-	//ehlo->event_type = SMTP_CMD_EHLO;
-	//ehlo->nel_id = ehlo_id;
-
 #ifdef USE_NEL
-	//ehlo->count = 0;
 	NEL_REF_INIT (ehlo);
 #endif
 	ehlo->len = len;
@@ -1088,8 +1002,7 @@ smtp_cmd_ehlo_new (int len, char *host_name)
  * in session->auth
  */
 int
-smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
-		     *psmtp, char *message, size_t length, size_t * index)
+smtp_cmd_ehlo_parse (struct smtp_info *psmtp, char *message, size_t length, size_t * index)
 {
 	struct smtp_cmd_ehlo *ehlo = NULL;
 	char *host_name;
@@ -1099,7 +1012,7 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_ehlo_parse\n");
 
 	/* if nel configureable variable var_disable_ehlo_cmd 
-	   is set to 1, don't allow the command pass through. wyong */
+	   is set to 1, don't allow the command pass through. */
 	/*
 	   //var_disable_ehlo_cmd = 1;
 	   if (var_disable_ehlo_cmd == 1) {
@@ -1118,14 +1031,6 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 EHLO Syntax: no SPACE.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
@@ -1133,14 +1038,6 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_atom_parse (message, length, &cur_token, &host_name);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 EHLO Syntax: host name error.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto err;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto err;
 	}
 
@@ -1148,14 +1045,6 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 	r = smtp_wsp_unstrict_crlf_parse (message, length, &cur_token);
 	if (r != SMTP_NO_ERROR) {
 		res = r;
-		//if (res == SMTP_ERROR_PARSE || res == SMTP_ERROR_CONTINUE) {
-		//      r = reply_to_client(ptcp, "501 EHLO Syntax: no CRLF.\r\n");
-		//      if (r != SMTP_NO_ERROR) {
-		//              res = r;
-		//              goto free;
-		//      }
-		//      res = SMTP_ERROR_PARSE;
-		//}
 		goto free;
 	}
 
@@ -1175,7 +1064,6 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 
 #ifdef USE_NEL
 	DEBUG_SMTP (SMTP_DBG, "eng=%p\n", eng);
-	/* put NEL Engine checking here */
 	if ((r = nel_env_analysis (eng, &(psmtp->env), ehlo_id,
 				   (struct smtp_simple_event *) ehlo)) < 0) {
 		DEBUG_SMTP (SMTP_DBG,
@@ -1186,25 +1074,17 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
 #endif
 
 	if (psmtp->permit & SMTP_PERMIT_DENY) {
-		//smtp_close_connection(ptcp, psmtp);
 		res = SMTP_ERROR_POLICY;
 		goto err;
 
 	}
 	else if (psmtp->permit & SMTP_PERMIT_DROP) {
-		//r = reply_to_client(ptcp, "550 EHLO cannot be implemented.\r\n");
-		//if (r != SMTP_NO_ERROR) {
-		//      res = r;
-		//      goto err;
-		//}
 		res = SMTP_ERROR_POLICY;
 		goto err;
 	}
 
 	DEBUG_SMTP (SMTP_DBG, "\n");
 	psmtp->last_cli_event_type = SMTP_CMD_EHLO;
-	//psmtp->cli_data += cur_token;
-	//psmtp->cli_data_len -= cur_token;
 
 	res = sync_client_data (psmtp, cur_token);
 	if (res < 0) {
@@ -1216,7 +1096,7 @@ smtp_cmd_ehlo_parse ( /* struct neti_tcp_stream *ptcp, */ struct smtp_info
       free:
 	DEBUG_SMTP (SMTP_DBG, "smtp_cmd_helo_parse: Free\n");
 	if (host_name) {
-		//xiayu 2005.11.22 debug should use the proper free func
+		//should use the proper free func
 		//smtp_string_free(host_name);
 		smtp_atom_free (host_name);
 	}

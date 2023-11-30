@@ -1,8 +1,3 @@
-/*
- * text_match.nel
- * $Id: text_match.nel,v 1.1 2005/11/16 06:09:54 wyong Exp $
- */
-
 static int nid = 91;
 static char type[] = "vulnerability";
 static char des[] = "instructions that can potentially executed as shellcode in From header";
